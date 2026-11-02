@@ -9,7 +9,7 @@ Source data: `reports/probe-20261101-200140/` (guided run, 70 of 85 results), `r
 - Hardware keys **never auto-repeat** (repeatCount stays 0, even on Backspace). The editor has to implement its own key repeat.
 - **Keyboard surface:**
   - **Scroll Assistant** gives touch events with coordinates from a device named `touchPad`. Shift+swipe works. Alt- and sym-held swipes produce nothing.
-  - **Cursor Assistant**, used properly (double-tap the keys, then slide), gives `DPAD_LEFT` / `DPAD_RIGHT` key events, horizontal only.
+  - **Cursor Assistant**, used properly (double-tap the keys, then slide), gives standard arrow-key events in **all four directions** (`DPAD_UP/DOWN/LEFT/RIGHT`). Up/down need more than one line of text, and the field must have focus. It works in TYPE_NULL.
   - Pointer capture gives nothing, and there is no Mouse mode on this device.
 - The **red button** is taken by the system out of the box. Set as the **PTT key for our app**, it arrives as **keycode 401** at every stage.
 - The **keyboard backlight** can't be forced on by any method found. The owner dropped the requirement.
@@ -69,7 +69,7 @@ There are three Unihertz touch settings: **Scroll Assistant**, **Cursor Assistan
 | Mode | What an app receives from a swipe |
 |---|---|
 | All off | A `KEYCODE 404` DOWN+UP pair (scancode 404) from `touchPad` when the finger lifts. No direction or distance. |
-| **Cursor Assistant** | A plain swipe gives only the 404 pair; that's all the guided run captured. **The feature needs a double-tap on the keys first, then a slide.** That sends `DPAD_LEFT` / `DPAD_RIGHT` KeyEvents from `touchPad`, one per character step, about 50–85 ms apart. **Left and right only**: sliding up or down sent nothing. In TYPE_NULL every step reaches pre-IME, activity and view; in normal text mode the IME swallows some (29 at pre-IME, 23 at the view). It works in other apps; the probe's own field just doesn't act on arrow keys. **Multi-line follow-up:** with three lines of text, Cursor Assistant sends **all four directions**.
+| **Cursor Assistant** | A plain swipe gives only the 404 pair; that's all the guided run captured. **The feature needs a double-tap on the keys first, then a slide.** That sends `DPAD_LEFT` / `DPAD_RIGHT` KeyEvents from `touchPad`, one per step, about 25–85 ms apart. In the first runs (one line of text) it sent left and right only, because there was nowhere to go vertically; see the multi-line follow-up below. In TYPE_NULL every step reaches pre-IME, activity and view; in normal text mode the IME swallows some (29 at pre-IME, 23 at the view). It works in other apps; the probe's own field just doesn't act on arrow keys. **Multi-line follow-up:** with three lines of text, Cursor Assistant sends **all four directions**.
 - **TYPE_NULL, field focused:** up ×7, down ×9, left ×21, right ×10, reaching pre-IME, activity and view.
 - **Normal text mode:** all four directions, but the IME consumes them after pre-IME.
 - Earlier runs that showed no arrows in TYPE_NULL had the probe field unfocused (the Release button was pressed by mistake). A single line gives only left/right.
