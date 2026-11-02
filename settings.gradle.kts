@@ -16,5 +16,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "titan-code"
 
-// Phase 0: only the Key & Gesture Probe exists. The real app module (":app") is added in M1.
+// ":app" is Titan Code. ":probe" is the Phase 0 Key & Gesture Probe, kept as a diagnostic tool.
+include(":app")
 include(":probe")

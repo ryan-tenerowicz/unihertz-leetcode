@@ -4,7 +4,7 @@ A plan for an Android app that makes it comfortable to browse coding problems, w
 
 > **This file is the design (the source of truth for *what* we build).** Progress, problems we hit, and the history of changes to this plan are in **[`PROGRESS.md`](PROGRESS.md)**. Device evidence is in [`docs/device-input-report.md`](docs/device-input-report.md). Owner decisions are recorded in Appendix A (plan feedback) and Appendix B (Phase 0 results).
 >
-> **Revision 6 (2026-11-01).** M1 pre-start review: no auto-pairing inside strings and comments, key routing on non-Code panes, acceptance panel inside `MainActivity`, Back on non-Code panes, and editor behaviour defaults. History: PROGRESS.md → Plan change log.
+> **Revision 7 (2026-11-01).** Soft wrap on by default, toggled with `sym+W` (owner feedback after the M1 step 2 check). Long-slide filter based on speed as well as width (§5.6). Keyboard-surface swipes move the cursor only; the touchscreen scrolls (§4.1, §5.6). History: PROGRESS.md → Plan change log.
 
 ---
 
@@ -64,7 +64,7 @@ Design principles:
 │   ├─ EditorScreen           Sora Editor (CodeEditor) + status line            │
 │   ├─ ResultsScreen          run/submit output, test case list                 │
 │   ├─ CommentsScreen         saved discussion + solutions (spoiler-gated)      │
-│   └─ SettingsScreen         indent width, soft wrap, storage, account         │
+│   └─ SettingsScreen         indent, wrap, swipe speeds, storage, account      │
 │                                                                               │
 │  InputRouter  ◄── editor's dispatchKeyEventPreIme / onKeyPreIme + MotionEvents│
 │   ├─ KeymapEngine          base / native Alt / Alt+Shift / leader (sym held)  │
@@ -174,17 +174,20 @@ Design principles:
     - **Not yet tested:** what PTT does while Titan Code is in the background (it may launch the app). The app handles both: a keycode 401 in `dispatchKeyEvent()`, and a relaunch intent through `onNewIntent()` (`singleTask`), which just brings it forward without toggling.
   - The other remap route, "programmable key = Sym key", also reaches the app (as `KEYCODE_SYM` with scancode 249). It isn't used, because it would look like the leader key.
 - **The tab bar** is the touch method for reaching any pane, including Problem and Code, alongside the red button.
-- **Touch in the Code pane:** standard Android touch behaviour keeps working (tapping places the cursor, and so on), but we don't design any extra touch features.
+- **Touch in the Code pane:** standard touch behaviour keeps working: tapping places the cursor, and **dragging on the screen scrolls the code, vertically and (with wrap off) horizontally**. This is the only way to scroll without moving the cursor (owner decision, revision 7: the keyboard surface is for the cursor only, §5.6). We don't design any extra touch features.
 
 ### 4.2 Editor presentation
 
 - **Theme and font:**
   - Dark theme with an AMOLED-black background and high-contrast syntax colours.
   - Monospace font (JetBrains Mono, bundled, ligatures off), default 12 sp. Font size changes only with `sym+I` / `sym+O`, in 1 sp steps from 8 to 24 sp, and **is saved between launches** (SharedPreferences).
-- **Layout settings (in the Settings screen only):**
-  - Indent width: 4 (the default) or 2.
-  - Soft wrap, off by default. When it's off, the view scrolls horizontally to follow the cursor.
-  - **Until the Settings screen exists (M2)**, indent width is fixed at 4 and soft wrap is fixed off.
+- **Soft wrap (owner decision, revision 7): on by default**, so the code never has to be scrolled sideways to be read.
+  - **`sym+W` toggles it** (§5.4), and the choice **is saved between launches**. With wrap off, long lines run past the screen edge and the view scrolls horizontally to follow the cursor.
+  - Words aren't split across rows (Sora's anti-word-breaking).
+  - **Continuation rows start at the left edge**: Sora 0.24 can't indent them to match the line. Line numbers appear only on a line's first row, which marks where each line starts.
+  - With wrap on, up/down movement (vertical swipe or arrow keys) goes **by screen row**, keeping the horizontal position (§5.6).
+- **Indent width (Settings screen, M2):** 4 (the default) or 2. Until the Settings screen exists it's fixed at 4.
+- **Swipe speeds (Settings screen, M2):** horizontal and vertical cursor speed for keyboard-surface swipes (§5.6).
 - **Visual aids:** indent guides, current-line highlight and matching-bracket highlight.
 
 ### 4.3 Problem list
@@ -302,6 +305,7 @@ The bindings use **letter keys only, matched by physical key**, so no binding ne
 | **G** | Go to line: a one-line bar above the status line. Type the number (digits are Alt+key, as everywhere else), then Enter jumps; Back closes. |
 | **F** | Find: a one-line bar above the status line. Matching is **case-insensitive** and **wraps around** the end of the buffer. Enter jumps to the next match; Back closes. No replace. Both bars take keys through the same `InputRouter`, so Alt, Alt+Shift and the `fn` palette work in them. |
 | **I** / **O** | Font size up / down |
+| **W** | Toggle soft wrap (§4.2); saved |
 | **H** | Cheat sheet: an overlay generated from the keymap (this table, the Alt+Shift symbols and the `fn` palette), so it can't drift from the real bindings |
 | **N** | Reset to starter code. Press `sym+N` a second time to confirm. The previous draft is kept: in M1 as one backup file per problem (overwritten on each reset), and from M2 in the draft version history. |
 | **Space** | Complete or indent (see below) |
@@ -342,10 +346,10 @@ Run on the red button is removed, and so is the long-press for Results. The red 
 
 | Gesture on keyboard surface | Action |
 |---|---|
-| Horizontal swipe | Move by character, accelerated |
-| Vertical swipe | Move by **line**, keeping the column. The view follows the cursor, and there's no separate scroll mode. |
+| Horizontal swipe | Move by character, accelerated. **Stops at the start or end of the line**; it never crosses to the next line (owner, M1 step 2). With wrap on it still crosses screen rows within the same line. Arrow keys still cross lines as usual. |
+| Vertical swipe | Move by **line**, keeping the column. With soft wrap on (the default), "line" means **screen row**, so a wrapped line takes several steps. The view follows the cursor, and there's no separate scroll mode. |
 | **Shift held** + swipe | Extend the selection *(confirmed by G05: events carry `META_SHIFT_ON`)* |
-| Long slide | Ignored. Any swipe covering more than 85% of the surface width in one stroke is dropped (G13). |
+| Long slide (the system's backlight gesture) | Ignored. A stroke that covers **more than 75% of the surface width at an average speed above 2000 px/s** is dropped, and any cursor movement it already made is undone (G13). Width alone can't tell it apart: the Phase 0 Shift-select swipe covered 893 px at about 1140 px/s, while the long slides covered 874–1015 px at 2900–6300 px/s. |
 
 **Removed (G06, G07):** Alt+swipe (word move and block jump) and `sym`+vertical swipe (move line). While Alt or `sym` is held, the surface sends **no events at all**. These actions have no gesture; the owner can give them key bindings later (§5.4).
 
@@ -365,19 +369,21 @@ Run on the red button is removed, and so is the long-press for Results. The red 
   - So the editor just handles `DPAD_*` as cursor moves (`EditorActions.moveLeft/Right/Up/Down`, with up/down keeping the column). Nothing else is needed.
 - **No selection through Cursor Assistant.** Pressing any key, Shift included, ends cursor mode (owner, in other apps). Selection always comes from **Shift held + a Scroll Assistant swipe**, which carries `META_SHIFT_ON` (G05, and again with both assistants on).
 - **Both assistants can be on at once.** In other apps each does its own job. In the probe with both on, every slide arrived as Scroll Assistant touch strokes, including the double-tap slides, and no arrow keys were mixed in. The editor therefore never sees the same slide as both a swipe and arrow keys, and won't move twice.
-- **Recommendation:** keep Scroll Assistant ON, which is required. Cursor Assistant can stay on for other apps; the editor accepts its arrows whenever they arrive.
+- **The app can't see Cursor Assistant's double-tap** (M1 step 2, 2026-11-01). With Scroll Assistant on, a stroke log of plain swipes, double-tap-then-slides, double-taps and a single tap recorded only slides: taps send no `touchPad` events (as G11 found). So the app can't tell a Cursor Assistant slide from a plain swipe, and both get the same treatment: they move the cursor.
+- **Recommendation:** keep Scroll Assistant ON, which is required. Cursor Assistant adds nothing in Titan Code while Scroll Assistant is on (its slides arrive as Scroll Assistant strokes), so it can be on or off as other apps need. Its arrows are still accepted if they ever arrive.
 
 How the gesture engine works:
 
 1. **Requirement:** Scroll Assistant must be ON. It has a Quick Settings tile (`touchpad_scroll_assistant`), and no readable settings key was found. Onboarding asks the user to enable it, and the editor shows a one-line hint if a swipe produces only keycode 404, the signature of Scroll Assistant being off.
 2. **Interception:** `Activity.dispatchTouchEvent()` routes every MotionEvent whose device is named **`touchPad`** to the gesture engine, matching by name rather than device id, and consumes it. These are screen-coordinate touch events: if they weren't consumed they would tap and drag on whatever view is underneath. Real screen touches (`fts_ts`) pass through unchanged. The router swallows the trailing keycode 404 pair (§5.1).
 3. **Deltas:** the engine works from the difference between successive x/y samples (about 10 ms apart), with acceleration and axis locking. Modifiers come from `event.metaState` together with the router's own key state.
-4. **Noise filtering:** typing produces short stray `touchPad` sequences ending in `ACTION_CANCEL` (G08). Movement starts only after the finger has travelled 24 px. A stroke ending in `ACTION_CANCEL` before that point is discarded, while one that has already started moving is treated as a normal end (G09, G12).
+4. **Noise filtering:** typing produces short stray `touchPad` sequences ending in `ACTION_CANCEL` (G08). Movement starts only after the finger has travelled 24 px; once it starts, travel is counted from the touch-down point (a fast stroke's first sample is often already far past 24 px). A stroke ending in `ACTION_CANCEL` before that point is discarded, while one that has already started moving is treated as a normal end (G09, G12).
 5. **Starting values, tuned with the owner in M1.** Surface coordinates span about 1080 px across the keyboard (one key is about 108 px).
    - **Axis lock:** a stroke locks to the axis with the larger travel after the 24 px start threshold. Diagonal strokes don't move both ways.
-   - **Horizontal:** 1 character per 40 px, multiplied by an acceleration factor of `1 + speed/1000 px·s⁻¹`, capped at 4×.
-   - **Vertical:** 1 line per 60 px, with no acceleration.
+   - **Horizontal:** 1 character per **70 px** (40 and then 60 px felt too fast to the owner in M1 step 2), multiplied by an acceleration factor of `1 + speed/1000 px·s⁻¹`, capped at 4×.
+   - **Vertical:** 1 line per **90 px** (60 px felt too fast to the owner in M1 step 2), with no acceleration.
    - Tuned values are recorded in PROGRESS.md.
+   - **Adjustable in the Settings screen (M2)** (owner request): horizontal speed (px per character) and vertical speed (px per line), each with a slider that takes effect immediately, so they can be tuned while trying the editor. Until then the tuned values above are fixed.
 6. **Problem pane:** a vertical stroke scrolls the WebView **1:1** (surface pixels to content pixels, with no inertia), so the keyboard surface scrolls it as §4.1 describes. Horizontal strokes do nothing there. **On Results and Comments** (placeholders in M1), surface events are consumed and ignored.
 7. **Arrow keys:** `DPAD_LEFT/RIGHT` move one character and `DPAD_UP/DOWN` move one line, keeping the column. They work the same from Cursor Assistant or any other source, and extend the selection while Shift is held.
 
@@ -674,7 +680,7 @@ Also take a photo of the keycaps.
 | E04 | Enter after a line ending in `:`; Enter on a normal line; Enter after `return x`; Enter inside `[]` | Indents; copies the indent; dedents; opens a block |
 | E05 | Backspace in leading whitespace | Deletes back to the previous indent stop |
 | E06 | Each symbol from K16 (except `` ` `` and `\`) in the editor | Native Alt symbols take 2 keystrokes; `$ % ^ &` take Alt+Shift+S/D/F/Z; the rest go through the `fn` palette; nothing unexpected is inserted |
-| E07 | Horizontal swipe; vertical swipe from a long line through a short line to a long line | Moves by character; moves by line and keeps the column |
+| E07 | Horizontal swipe; vertical swipe from a long line through a short line to a long line, once with wrap off and once through a wrapped line with wrap on; `sym+W` | Moves by character; moves by line (by screen row when wrapping) and keeps the column; `sym+W` switches wrap and it survives a restart |
 | E08 | Shift + swipe; Cursor Assistant slides (double-tap, then slide) up, down, left and right in a 10-line buffer | Shift + swipe selects; Cursor Assistant moves the cursor in all four directions, with up/down keeping the column |
 | E09 | Each leader binding in §5.4 | Each does exactly its one action; nothing else triggers |
 | E10 | Red button repeatedly (PTT app = Titan Code) | Switches between Problem and Code (in M1 the Problem pane shows a bundled sample statement); scroll position and cursor are kept |
@@ -730,7 +736,7 @@ The owner performs physical actions on the phone; the agent records and analyses
 <br>• A **3-item picker** at the top of the Problem pane (a WebView with bundled CSS) chooses the active sample.
 <br>• **Minimal draft autosave** writes one file per sample in app storage (debounced 1 s, and on pause), plus one backup file per sample for `sym+N`. The Room store replaces it in M2.
 <br>• Results and Comments panes are placeholders. Run, Submit and `sym+R/E/S` show "Coming in M3/M4". | E01–E15 pass (E01–E02 against the bundled samples) |
-| **M2** | **Read LeetCode, offline-first**: provider interface, Room store, native login plus Cloudflare fallback, problem list, problem pane, Comments pane, starter code, drafts moved into Room (migrating M1's draft files), save-on-open, Settings and Onboarding | In airplane mode, a problem saved earlier opens with its statement and comments; drafts survive a force-stop |
+| **M2** | **Read LeetCode, offline-first**: provider interface, Room store, native login plus Cloudflare fallback, problem list, problem pane, Comments pane, starter code, drafts moved into Room (migrating M1's draft files), save-on-open, Settings (including swipe speeds) and Onboarding | In airplane mode, a problem saved earlier opens with its statement and comments; drafts survive a force-stop |
 | **M3** | **Run and submit on LeetCode**: Results pane (opens automatically), both `check` parsers, saved test cases from custom runs and failed submissions, offline Submit blocked | The full loop works on the device |
 | **M4** | **Local runner and offline packs**: the `:runner` process with a warm spare, judge-matched environment, all result-checking modes, offline packs and sync | E16 passes after downloading a LeetCode study-plan pack; local runs finish in under 1 s |
 | **M5** | **Polish**: autocomplete and snippets (`sym+Space`), themes, tuning the symbol palette and gestures | Daily-driver quality |
@@ -816,6 +822,9 @@ The current status and the ordered task list are in **PROGRESS.md → Next up**.
 | M1 review: acceptance tests | A full guided acceptance screen, debug builds only, with automatic checks where measurable | §10 |
 | M1 review: git | Stay on `master`; commit only when the owner asks | §11 |
 | M1 review: defaults | Sample picker, WebView Problem pane, `sym+N` backup file, typing closes the palette and types the key, red button on Results/Comments → Code, "Coming in M3/M4" for Run/Submit, `sym+Space` indents only, Find and Go-to-line bars, saved font size, fixed indent and wrap until M2 | §4, §5, §12 |
+| M1 step 2: swipe speed | Tuned to 70 px per character and 90 px per line; both become adjustable settings in M2 | §4.2, §5.6 |
+| M1 step 2: keyboard surface | Swipes on the keys **move the cursor only**; scrolling is done by dragging on the touchscreen. (Tried both: a scroll-by-default mode with a tap-then-slide cursor mode was built and rejected, and the app can't see taps anyway.) | §4.1, §5.6 |
+| M1 step 2: horizontal scrolling | Soft wrap **on by default**; `sym+W` toggles it and the choice is saved. Up/down moves by screen row when wrapping. (Supersedes "fixed wrap off until M2" from the M1 review defaults.) | §4.2, §5.4, §5.6 |
 | M1 pre-start: auto-pairing in strings | No auto-pairing inside strings or comments; palette closers type over like typed ones | §5.3, §5.5 |
 | M1 pre-start: keys on non-Code panes | Routed from `MainActivity.dispatchKeyEvent()`. Non-editing leader commands work; text and editing keys are ignored and never reach the WebView; no auto-switch to Code | §3, §5.1 |
 | M1 pre-start: acceptance screen | A debug-only collapsible panel inside `MainActivity` over the real shell; E01/E02 reference shown in the Problem pane | §3, §10 |

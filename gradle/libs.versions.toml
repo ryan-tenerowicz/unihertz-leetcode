@@ -1,0 +1,32 @@
+# Pinned for the toolchain in PLAN §11: AGP 8.7.3, Kotlin 2.1.0, Gradle 8.11.1, JDK 21.
+# Upgrading any of these is a deliberate step, recorded in PROGRESS.md.
+[versions]
+agp = "8.7.3"
+kotlin = "2.1.0"
+# Compose 1.8.2 / Material 3 1.3.2. Later BOMs move to compileSdk 36.
+composeBom = "2025.05.01"
+# 1.11 needs compileSdk 36.
+activityCompose = "1.10.1"
+# Newest Sora whose language-textmate needs kotlin-stdlib ≤ 2.2 (readable by Kotlin 2.1).
+# 0.24.5+ needs stdlib 2.3+. Fallback: 0.23.7 (stdlib 2.1.21).
+sora = "0.24.4"
+junit = "4.13.2"
+okhttp = "4.12.0"
+
+[libraries]
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+compose-ui = { group = "androidx.compose.ui", name = "ui" }
+compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+sora-bom = { group = "io.github.rosemoe", name = "editor-bom", version.ref = "sora" }
+sora-editor = { group = "io.github.rosemoe", name = "editor" }
+sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmate" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
 # Build the debug APK, install it on the connected phone, and launch it.
-# Usage: scripts/install.sh [probe]      (only the probe exists in Phase 0)
-#        scripts/install.sh probe --no-build   (reinstall the last build)
+# Usage: scripts/install.sh [app|probe]          (default: app once it exists)
+#        scripts/install.sh app --no-build      (reinstall the last build)
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 cd "$REPO_ROOT"
 
-MODULE="${1:-probe}"
-case "$MODULE" in
-  probe) APP_ID="$PROBE_ID" ;;
-  *) echo "Unknown module '$MODULE' (available: probe)"; exit 1 ;;
-esac
+MODULE="${1:-$(default_module)}"
+resolve_module "$MODULE"
 
 require_device
 
@@ -38,7 +35,7 @@ if ! out="$(adb install -r -t "$APK" 2>&1)"; then
   echo "$out"
   if echo "$out" | grep -q "INSTALL_FAILED_UPDATE_INCOMPATIBLE"; then
     echo "✗ The installed copy was signed with a different key."
-    echo "  Pull any results first (scripts/pull-report.sh), then: adb uninstall $APP_ID && scripts/install.sh $MODULE --no-build"
+    echo "  Pull any results first (scripts/pull-report.sh $MODULE), then: adb uninstall $APP_ID && scripts/install.sh $MODULE --no-build"
   fi
   exit 1
 fi
@@ -46,4 +43,4 @@ echo "$out" | tail -1
 
 echo "▸ Launching $APP_ID"
 adb shell am start -n "$APP_ID/.MainActivity" >/dev/null
-echo "✓ Installed and launched. Live log: scripts/logcat.sh"
+echo "✓ Installed and launched. Live log: scripts/logcat.sh $MODULE"

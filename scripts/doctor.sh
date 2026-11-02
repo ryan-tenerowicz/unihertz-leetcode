@@ -43,11 +43,14 @@ if command -v adb >/dev/null 2>&1; then
       size="$(adb -s "$d" shell wm size | tr -d '\r' | awk -F': ' '{print $2}')"
       pass "device $d: $model, Android $rel, $size"
       echo "$model" | grep -qi titan || warn "this doesn't look like a Titan — is the right phone connected?"
-      if adb -s "$d" shell pm list packages "$PROBE_ID" | grep -q "$PROBE_ID"; then
-        pass "probe installed: $(adb -s "$d" shell dumpsys package $PROBE_ID | grep -m1 versionName | tr -d ' \r')"
-      else
-        warn "probe not installed yet (scripts/install.sh)"
-      fi
+      for pair in "Titan Code:$APP_ID_CODE:app" "probe:$PROBE_ID:probe"; do
+        label="${pair%%:*}"; rest="${pair#*:}"; id="${rest%%:*}"; mod="${rest#*:}"
+        if adb -s "$d" shell pm list packages "$id" | grep -q "$id"; then
+          pass "$label installed: $(adb -s "$d" shell dumpsys package "$id" | grep -m1 versionName | tr -d ' \r')"
+        else
+          warn "$label not installed (scripts/install.sh $mod)"
+        fi
+      done
     done
   else
     fail "no device connected (adb devices)"
@@ -57,5 +60,5 @@ else
 fi
 
 echo
-[ $ok -eq 0 ] && echo "All good. Next: scripts/install.sh" || echo "Fix the ✗ items above, then re-run scripts/doctor.sh"
+[ $ok -eq 0 ] && echo "All good. Next: scripts/install.sh $(default_module)" || echo "Fix the ✗ items above, then re-run scripts/doctor.sh"
 exit $ok

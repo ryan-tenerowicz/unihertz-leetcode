@@ -1,0 +1,5 @@
+# Phase 0 G08@scroll (reports/probe-20261101-200140), touchPad touch events at Activity.dispatchTouchEvent
+# action,x,y,eventTimeMs,metaState
+DOWN,322,816.25,23059223,0
+MOVE,305.5,810.625,23059237,0
+CANCEL,311,812.5,23063402,0

@@ -37,5 +37,5 @@ kotlin {
 
 dependencies {
     // Only used by the C01 Cloudflare check, to compare OkHttp against WebView fetch().
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.okhttp)
 }
