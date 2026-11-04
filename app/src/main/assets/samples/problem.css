@@ -1,0 +1,48 @@
+/* Dark, compact statement style (PLAN §4.1). Bundled: the Problem pane works offline. */
+@font-face { font-family: "JetBrains Mono"; src: url("file:///android_res/font/jetbrains_mono_nl_regular.ttf"); }
+html, body { background: #000; color: #dcdcdc; margin: 0; }
+body { font: 15px/1.45 sans-serif; padding: 8px 14px 48px; }
+h1 { font-size: 18px; margin: 4px 0 10px; color: #f0f0f0; }
+h2 { font-size: 14px; margin: 16px 0 6px; color: #ffcc33; text-transform: uppercase; letter-spacing: .04em; }
+p, ul, ol { margin: 6px 0; }
+ul, ol { padding-left: 22px; }
+li { margin: 3px 0; }
+code, pre { font-family: "JetBrains Mono", monospace; font-size: 13px; }
+code { background: #1a1a1a; padding: 1px 4px; border-radius: 3px; }
+pre { background: #111; border-left: 3px solid #333; padding: 8px 10px; white-space: pre-wrap; margin: 6px 0; }
+pre b { color: #9a9a9a; font-weight: normal; }
+strong { color: #fff; }
+.easy, .medium, .hard { font-size: 12px; font-weight: normal; padding: 1px 6px; border-radius: 9px; vertical-align: middle; }
+.easy { color: #00b8a3; border: 1px solid #00b8a3; }
+.medium { color: #ffc01e; border: 1px solid #ffc01e; }
+.hard { color: #ff375f; border: 1px solid #ff375f; }
+/* M2: statement header, hints, discussions (PLAN §4.1, §8.2). */
+img { max-width: 100%; height: auto; background: #fff; }
+table { border-collapse: collapse; } td, th { border: 1px solid #333; padding: 2px 6px; }
+.meta { color: #8a8a8a; font-size: 12px; margin: 0 0 10px; }
+.tag { display: inline-block; color: #9ab; border: 1px solid #334; border-radius: 9px; padding: 0 6px; margin: 2px 3px 2px 0; font-size: 11px; }
+.dim { color: #8a8a8a; }
+.note { color: #ffcc33; border: 1px solid #554400; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+details { margin: 6px 0; border: 1px solid #262626; border-radius: 6px; padding: 4px 8px; }
+summary { color: #ffcc33; font-size: 13px; }
+.c { border-top: 1px solid #222; padding: 8px 0 4px; }
+.c .who { color: #8a8a8a; font-size: 12px; }
+.c .who b { color: #cfcfcf; font-weight: 600; }
+.replies { margin-left: 12px; border-left: 2px solid #262626; padding-left: 10px; }
+.replies .c { border-top: none; padding-top: 4px; }
+.sol { border-top: 2px solid #333; padding-top: 10px; margin-top: 14px; }
+h3, h4, h5, h6 { font-size: 15px; margin: 10px 0 4px; color: #f0f0f0; }
+blockquote { margin: 4px 0; padding-left: 10px; border-left: 3px solid #444; color: #b0b0b0; }
+a { color: #8ab4f8; text-decoration: none; }
+/* rev 10: foldable code blocks (no JavaScript: <details>). */
+details.code { border: none; padding: 0; margin: 6px 0; }
+details.code > summary { list-style: none; color: inherit; font-size: inherit; }
+details.code > summary::-webkit-details-marker { display: none; }
+details.code > summary .peek { margin-bottom: 0; opacity: .85; }
+details.code > summary .more { display: block; color: #ffcc33; font-size: 12px; padding: 3px 10px; background: #111; border-left: 3px solid #333; }
+details.code[open] > summary .peek, details.code[open] > summary .more { display: none; }
+details.code[open] > summary::before { content: "▾ fold code"; color: #ffcc33; font-size: 12px; }
+pre .lang { float: right; color: #666; font-size: 11px; font-family: sans-serif; }
+/* rev 10: solution post */
+.post-meta { color: #8a8a8a; font-size: 12px; margin: -6px 0 10px; }
+.more-link { display: block; text-align: center; padding: 12px; margin: 12px 0; border: 1px solid #333; border-radius: 6px; color: #ffcc33; }

@@ -11,7 +11,18 @@ activityCompose = "1.10.1"
 # 0.24.5+ needs stdlib 2.3+. Fallback: 0.23.7 (stdlib 2.1.21).
 sora = "0.24.4"
 junit = "4.13.2"
+# M2. KSP must match Kotlin 2.1.0. Room 2.6.1 is the last line that needs neither compileSdk 36 nor Kotlin 2.2.
+ksp = "2.1.0-1.0.29"
+room = "2.6.1"
+coroutines = "1.9.0"
+lifecycle = "2.8.7"
+# M4 local runner. 17.2 supports AGP 7.3–9.5 and Python 3.10–3.15.
+chaquopy = "17.2.0"
+# 2.9.x builds with compileSdk 35 (2.10 needs 35+ too, but newer AGP).
+work = "2.10.0"
 okhttp = "4.12.0"
+# Rev 13: Codeforces statements are HTML pages; parsed (and unit-tested) with jsoup.
+jsoup = "1.18.1"
 
 [libraries]
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -25,8 +36,19 @@ sora-editor = { group = "io.github.rosemoe", name = "editor" }
 sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmate" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+json = { group = "org.json", name = "json", version = "20240303" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+chaquopy = { id = "com.chaquo.python", version.ref = "chaquopy" }

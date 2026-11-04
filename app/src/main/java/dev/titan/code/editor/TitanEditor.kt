@@ -1,7 +1,7 @@
 package dev.titan.code.editor
 
 import android.content.Context
-import android.graphics.Typeface
+import android.graphics.Canvas
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.inputmethod.BaseInputConnection
@@ -9,9 +9,13 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import dev.titan.code.TLog
 import io.github.rosemoe.sora.event.ContentChangeEvent
+import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.text.CharPosition
+import io.github.rosemoe.sora.text.UndoManager
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SelectionMovement
+import io.github.rosemoe.sora.widget.component.EditorTextActionWindow
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import io.github.rosemoe.sora.widget.subscribeAlways
 
 /**
@@ -34,9 +38,17 @@ class TitanEditor(context: Context) : CodeEditor(context) {
 
     val actions: EditorActions = SoraActions(this)
 
+    /** Fading trail behind cursor moves (rev 15). Off while loading text or editing. */
+    private val trail = CursorTrail(this) { colorScheme.getColor(EditorColorScheme.SELECTION_INSERT) }
+    var trailEnabled = true
+        set(value) { field = value; if (!value) trail.clear() }
+    private var quiet = false
+
+    /** Indent guides in both wrap modes (rev 18); Sora's own in-text block lines are made invisible. */
+    private val guides = IndentGuides(this, { actions.indentWidth }, 0xFF2A2A2A.toInt(), 0xFF5A5A5A.toInt())
+
     init {
-        typefaceText = Typeface.MONOSPACE
-        typefaceLineNumber = Typeface.MONOSPACE
+        CodeTheme.apply(this)
         setTextSize(12f)
         props.symbolPairAutoCompletion = false
         props.autoIndent = false
@@ -44,17 +56,43 @@ class TitanEditor(context: Context) : CodeEditor(context) {
         props.deleteMultiSpaces = 1
         props.formatPastedText = false
         props.disallowSuggestions = true
+        // Undo groups a run of typing; a pause of about 1 s starts a new step (PLAN §5.5).
+        UndoManager.setMergeTimeLimit(1000)
         setSoftKeyboardEnabled(false)
+        // Sora's floating copy/paste bar would edit outside EditorActions; sym+C/X/V replace it.
+        getComponent(EditorTextActionWindow::class.java).isEnabled = false
         inputType = InputType.TYPE_NULL
         isFocusable = true
         isFocusableInTouchMode = true
 
+        subscribeAlways<SelectionChangeEvent> { e ->
+            if (!trailEnabled || quiet || ownEdit || e.cause == SelectionChangeEvent.CAUSE_TEXT_MODIFICATION) return@subscribeAlways
+            // Follow the end that moved (with no selection, both ends are the cursor).
+            val oldLeft = e.oldLeft ?: return@subscribeAlways
+            val oldRight = e.oldRight ?: return@subscribeAlways
+            val leftMoved = e.left.index != oldLeft.index
+            val old = if (leftMoved) oldLeft else oldRight
+            val new = if (leftMoved) e.left else e.right
+            trail.moved(old.line, old.column, new.line, new.column)
+        }
         subscribeAlways<ContentChangeEvent> { e ->
             if (!ownEdit && e.action != ContentChangeEvent.ACTION_SET_NEW_TEXT && !e.isCausedByUndoManager) {
                 foreignEdits++
                 TLog.w("FOREIGN EDIT #$foreignEdits action=${e.action} text='${e.changedText}' at ${e.changeStart.line}:${e.changeStart.column}")
             }
         }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        guides.draw(canvas)
+        trail.draw(canvas)
+    }
+
+    private inline fun quietly(block: () -> Unit) {
+        quiet = true
+        trail.clear()
+        try { block() } finally { quiet = false }
     }
 
     override fun dispatchKeyEventPreIme(event: KeyEvent): Boolean {
@@ -79,6 +117,25 @@ class TitanEditor(context: Context) : CodeEditor(context) {
 
     override fun onCheckIsTextEditor(): Boolean = true
 
+    /** Replace the whole buffer without undo history (opening a draft or sample). */
+    fun load(text: String, line: Int, column: Int) = quietly {
+        setText(text)
+        val l = line.coerceIn(0, this.text.lineCount - 1)
+        setSelection(l, column.coerceIn(0, this.text.getColumnCount(l)))
+    }
+
+    /** Replace the whole buffer as one undoable edit (`sym+N`, reset to starter). */
+    fun replaceAll(text: String, line: Int, column: Int) = quietly {
+        ownEdit = true
+        try {
+            val t = this.text
+            val last = t.lineCount - 1
+            t.replace(0, 0, last, t.getColumnCount(last), text)
+        } finally { ownEdit = false }
+        val l = line.coerceIn(0, this.text.lineCount - 1)
+        setSelection(l, column.coerceIn(0, this.text.getColumnCount(l)))
+    }
+
     /** The end of the selection that moves when it's extended (the other end is the anchor). */
     internal fun movingEnd(): CharPosition = selectingTarget
 
@@ -97,34 +154,68 @@ class TitanEditor(context: Context) : CodeEditor(context) {
         code == KeyEvent.KEYCODE_VOLUME_MUTE || code == KeyEvent.KEYCODE_POWER
 }
 
-/** [EditorActions] on top of Sora's text model. Bypasses Sora's auto-indent and pairing. */
-private class SoraActions(private val ed: TitanEditor) : EditorActions {
+/**
+ * [EditorActions] on top of Sora's text model. The Python rules live in [PyEdit]; this class is
+ * its [TextBuffer] plus cursor movement, undo and wrap. Bypasses Sora's auto-indent and pairing.
+ */
+private class SoraActions(private val ed: TitanEditor) : EditorActions, TextBuffer {
 
-    private inline fun edit(block: () -> Unit) {
+    private val py = PyEdit(this)
+
+    override var indentWidth: Int
+        get() = py.indentWidth
+        set(value) { py.indentWidth = value }
+
+    private inline fun <T> edit(block: () -> T): T {
         ed.ownEdit = true
-        try { block() } finally { ed.ownEdit = false }
-        ed.ensureSelectionVisible()
-    }
-
-    override fun insert(text: String) = edit {
-        ed.commitText(text, /* applyAutoIndent = */ false, /* applySymbolCompletion = */ false)
-    }
-
-    override fun backspace() = edit { ed.deleteText() }
-
-    override fun deleteForward() = edit {
-        val c = ed.cursor
-        val t = ed.text
-        if (c.isSelected) {
-            t.delete(c.leftLine, c.leftColumn, c.rightLine, c.rightColumn)
-        } else if (c.leftColumn < t.getColumnCount(c.leftLine)) {
-            t.delete(c.leftLine, c.leftColumn, c.leftLine, c.leftColumn + 1)
-        } else if (c.leftLine + 1 < t.lineCount) {
-            t.delete(c.leftLine, c.leftColumn, c.leftLine + 1, 0)
+        try { return block() } finally {
+            ed.ownEdit = false
+            ed.ensureSelectionVisible()
         }
     }
 
-    override fun newline() = insert("\n")
+    // ---- TextBuffer -------------------------------------------------------------------
+
+    override val lineCount get() = ed.text.lineCount
+    override fun line(i: Int): String = ed.text.getLineString(i)
+    override val selStart get() = ed.cursor.let { Pos(it.leftLine, it.leftColumn) }
+    override val selEnd get() = ed.cursor.let { Pos(it.rightLine, it.rightColumn) }
+
+    override fun replace(start: Pos, end: Pos, text: String) {
+        if (start == end && text.isEmpty()) return
+        if (start == end) ed.text.insert(start.line, start.col, text)
+        else ed.text.replace(start.line, start.col, end.line, end.col, text)
+    }
+
+    override fun select(start: Pos, end: Pos) {
+        if (start == end) ed.setSelection(start.line, start.col, false)
+        else ed.setSelectionRegion(start.line, start.col, end.line, end.col, false)
+    }
+
+    override fun group(block: () -> Unit) {
+        val t = ed.text
+        t.beginBatchEdit()
+        try { block() } finally { t.endBatchEdit() }
+    }
+
+    // ---- EditorActions ----------------------------------------------------------------
+
+    override fun insert(text: String) = edit { py.type(text) }
+    override fun insertPlain(text: String) = edit { py.insertPlain(text) }
+    override fun backspace() = edit { py.backspace() }
+    override fun deleteForward() = edit { py.deleteForward() }
+    override fun newline() = edit { py.newline() }
+    override fun indent() = edit { py.indent() }
+    override fun wordPrefix(): String = py.wordPrefix()
+    override fun complete(prefixLen: Int, text: String) = edit { py.complete(prefixLen, text) }
+    override fun words(): Set<String> = py.words()
+    override fun selectLine() = edit { py.selectLine() }
+    override fun deleteLine() = edit { py.deleteLine() }
+    override fun duplicateLine() = edit { py.duplicateLine() }
+    override fun toggleComment() = edit { py.toggleComment() }
+    override fun copy(): Clip = py.copy()
+    override fun cut(): Clip = edit { py.cut() }
+    override fun paste(clip: Clip) = edit { py.paste(clip) }
 
     override fun move(direction: EditorActions.Direction, extend: Boolean, withinLine: Boolean) {
         if (withinLine && atLineEdge(direction, extend)) return
@@ -163,13 +254,12 @@ private class SoraActions(private val ed: TitanEditor) : EditorActions {
     }
 
     override fun restoreSelection(mark: EditorActions.Mark) {
-        if (mark.startLine == mark.endLine && mark.startColumn == mark.endColumn) {
-            ed.setSelection(mark.startLine, mark.startColumn, false)
-        } else {
-            ed.setSelectionRegion(mark.startLine, mark.startColumn, mark.endLine, mark.endColumn, false)
-        }
+        select(Pos(mark.startLine, mark.startColumn), Pos(mark.endLine, mark.endColumn))
         scrollTo(mark.scrollX, mark.scrollY)
     }
+
+    override fun undo() = edit { ed.undo() }
+    override fun redo() = edit { ed.redo() }
 
     override fun toggleSoftWrap(): Boolean {
         ed.setWordwrap(!ed.isWordwrap, /* antiWordBreaking = */ true)

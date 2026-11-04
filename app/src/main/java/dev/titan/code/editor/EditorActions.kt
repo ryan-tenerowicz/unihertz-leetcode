@@ -8,14 +8,18 @@ package dev.titan.code.editor
 interface EditorActions {
     enum class Direction { LEFT, RIGHT, UP, DOWN }
 
-    /** Insert text at the cursor, replacing any selection. */
+    /** Type text at the cursor with the Python rules (pairing, type-over), replacing any selection. */
     fun insert(text: String)
-    /** Delete the selection, or the character before the cursor. */
+    /** Insert text as-is (paste-like): no pairing. */
+    fun insertPlain(text: String)
+    /** Delete the selection, an empty pair, back to the previous indent stop, or one character. */
     fun backspace()
     /** Delete the selection, or the character after the cursor. */
     fun deleteForward()
-    /** Split the line at the cursor. */
+    /** Smart Enter (PLAN §5.5). */
     fun newline()
+    /** `sym+Space`: one indent level at the cursor, or indent the selected lines. */
+    fun indent()
     /**
      * Move the cursor one step; with [extend], grow the selection instead. With [withinLine],
      * LEFT/RIGHT stop at the start or end of the line instead of crossing to the next one
@@ -29,6 +33,25 @@ interface EditorActions {
         val startLine: Int, val startColumn: Int, val endLine: Int, val endColumn: Int,
         val scrollX: Int, val scrollY: Int,
     )
+
+    fun undo()
+    fun redo()
+
+    fun selectLine()
+    fun deleteLine()
+    fun duplicateLine()
+    fun toggleComment()
+    fun copy(): Clip
+    fun cut(): Clip
+    fun paste(clip: Clip)
+
+    /** Spaces per indent level: 4 (default) or 2, from Settings (PLAN §4.2). */
+    var indentWidth: Int
+
+    /** Completion (M5): the identifier before the cursor, replacing it, and the buffer's words. */
+    fun wordPrefix(): String = ""
+    fun complete(prefixLen: Int, text: String) {}
+    fun words(): Set<String> = emptySet()
 
     /** Turn soft wrap on or off; returns the new state. */
     fun toggleSoftWrap(): Boolean

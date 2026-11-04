@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: a receiver for running harness requests from adb (rev 24). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver android:name=".debug.DebugRunReceiver" android:exported="true" />
+    </application>
+</manifest>

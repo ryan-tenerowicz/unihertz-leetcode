@@ -1,0 +1,89 @@
+{
+ "status": "OK",
+ "result": {
+  "problems": [
+   {
+    "contestId": 2278,
+    "index": "G",
+    "name": "0s and 1s",
+    "type": "PROGRAMMING",
+    "tags": [
+     "bitmasks",
+     "dfs and similar",
+     "dp",
+     "hashing",
+     "number theory",
+     "trees"
+    ]
+   },
+   {
+    "contestId": 2278,
+    "index": "F",
+    "name": "Modulo and Counting",
+    "type": "PROGRAMMING",
+    "tags": [
+     "dp",
+     "math",
+     "number theory"
+    ]
+   },
+   {
+    "contestId": 2278,
+    "index": "E",
+    "name": "Swap and Negate",
+    "type": "PROGRAMMING",
+    "tags": [
+     "constructive algorithms",
+     "greedy"
+    ]
+   },
+   {
+    "contestId": 2278,
+    "index": "D",
+    "name": "Lock and Unlock",
+    "type": "PROGRAMMING",
+    "tags": [
+     "greedy"
+    ]
+   },
+   {
+    "contestId": 4,
+    "index": "A",
+    "name": "Watermelon",
+    "type": "PROGRAMMING",
+    "rating": 800,
+    "tags": [
+     "brute force",
+     "math"
+    ]
+   }
+  ],
+  "problemStatistics": [
+   {
+    "contestId": 2278,
+    "index": "G",
+    "solvedCount": 577
+   },
+   {
+    "contestId": 2278,
+    "index": "F",
+    "solvedCount": 1201
+   },
+   {
+    "contestId": 2278,
+    "index": "E",
+    "solvedCount": 4799
+   },
+   {
+    "contestId": 2278,
+    "index": "D",
+    "solvedCount": 7964
+   },
+   {
+    "contestId": 4,
+    "index": "A",
+    "solvedCount": 748350
+   }
+  ]
+ }
+}

@@ -1,0 +1,44 @@
+{
+ "data": {
+  "id": "lru-cache",
+  "tag": "NeetCode150",
+  "has_article": true,
+  "name": "LRU Cache",
+  "description": "Implement the [Least Recently Used (LRU)](https://en.wikipedia.org/wiki/Cache_replacement_policies#LRU) cache class `LRUCache`. The class should support the following operations\n\n* `LRUCache(int capacity)` Initialize the LRU cache of size `capacity`.\n* `int get(int key)` Return the value corresponding to the `key` if the `key` exists, otherwise return `-1`.\n* `void put(int key, int value)` Update the `value` of the `key` if the `key` exists. Otherwise, add the `key`-`value` pair to the cache. If the introduction of the new pair causes the cache to exceed its capacity, remove the least recently used key.\n\nA key is considered used if a `get` or a `put` operation is called on it.\n\nEnsure that `get` and `put` each run in $O(1)$ average time complexity.\n\n**Example 1:**\n\n```java\nInput:\n[\"LRUCache\", [2], \"put\", [1, 10],  \"get\", [1], \"put\", [2, 20], \"put\", [3, 30], \"get\", [2], \"get\", [1]]\n\nOutput:\n[null, null, 10, null, null, 20, -1]\n\nExplanation:\nLRUCache lRUCache = new LRUCache(2);\nlRUCache.put(1, 10);  // cache: {1=10}\nlRUCache.get(1);      // return 10\nlRUCache.put(2, 20);  // cache: {1=10, 2=20}\nlRUCache.put(3, 30);  // cache: {2=20, 3=30}, key=1 was evicted\nlRUCache.get(2);      // returns 20 \nlRUCache.get(1);      // return -1 (not found)\n```\n\n**Constraints:**\n* `1 <= capacity <= 3000`\n* `0 <= key <= 10^4`\n* `0 <= value <= 10^5`\n* At most `2 * 10^5` calls will be made to `get` and `put`.\n\n\n<br>\n<br>\n<details class=\"hint-accordion\">\n    <summary>Topics</summary>\n    <div class=\"company-tags-container\">\n    <br>\n      <a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/hash-table\" target=\"_blank\">Hash Table</a>\n<a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/linked-list\" target=\"_blank\">Linked List</a>\n<a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/design\" target=\"_blank\">Design</a>\n<a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/doubly-linked-list\" target=\"_blank\">Doubly-Linked List</a>\n    </div>\n</details>\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Recommended Time & Space Complexity</summary>\n    <p>\n    You should aim for a solution with <code>O(1)</code> time for each <code>put()</code> and <code>get()</code> function call and an overall space of <code>O(n)</code>, where <code>n</code> is the capacity of the <code>LRU</code> cache.\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 1</summary>\n    <p>\n    Can you think of a data structure for storing data in key-value pairs? Maybe a hash-based data structure with unique keys.\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 2</summary>\n    <p>\n    We can use a hash map which takes <code>O(1)</code> time to get and put the values. But, how can you deal with the least recently used to be removed criteria as a key is updated by the <code>put()</code> or recently used by the <code>get()</code> functions? Can you think of a data structure to store the order of values?\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 3</summary>\n    <p>\n    A brute-force solution would involve maintaining the order of key-value pairs in an array list, performing operations by iterating through the list to erase and insert these key-value pairs. However, this would result in an <code>O(n)</code> time complexity. Can you think of a data structure that allows removing and reinserting elements in <code>O(1)</code> time?\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 4</summary>\n    <p>\n    We can use a doubly-linked list, which allows us to remove a node from the list when we have the address of that node. Can you think of a way to store these addresses so that we can efficiently remove or update a key when needed?\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 5</summary>\n    <p>\n    We can use a doubly linked list where key-value pairs are stored as nodes, with the least recently used (LRU) node at the head and the most recently used (MRU) node at the tail. Whenever a key is accessed using <code>get()</code> or <code>put()</code>, we remove the corresponding node and reinsert it at the tail. When the cache reaches its capacity, we remove the LRU node from the head of the list. Additionally, we use a hash map to store each key and the corresponding address of its node, enabling efficient operations in <code>O(1)</code> time. \n    </p>\n</details>\n\n\n<br>\n<details class=\"company-tags-accordion\">\n    <summary>Company Tags</summary>\n    <p>Please upgrade to <a href=\"https://neetcode.io/pro\" target=\"_blank\">NeetCode Pro</a> to view company tags.</p>\n</details>",
+  "difficulty": "Medium",
+  "free": true,
+  "test_case_type": "class",
+  "distributionVersion": 2,
+  "custom_test_cases": [
+   "[\"LRUCache\", [2], \"put\", [1, 10],  \"get\", [1], \"put\", [2, 20], \"put\", [3, 30], \"get\", [2], \"get\", [1]]"
+  ],
+  "allow_customize": false,
+  "availableLanguages": [
+   "python",
+   "java",
+   "cpp",
+   "javascript",
+   "typescript",
+   "csharp",
+   "go",
+   "kotlin",
+   "swift",
+   "rust"
+  ],
+  "topics": [
+   "Hash Table",
+   "Linked List",
+   "Design",
+   "Doubly-Linked List"
+  ],
+  "video": "## Video Explanation\n\n<div\nclass=\"video-container\"\nstyle=\"margin-top: 20px; position: relative; overflow: hidden\"\n>\n<iframe\nclass=\"video\"\nsrc=\"https://www.youtube.com/embed/7ABFKPK2hD4?rel=0\"\ntitle=\"Vimeo video player\"\nframeborder=\"0\"\nallow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\"\nallowfullscreen\n>\n</iframe>\n</div>",
+  "article_body": "## Prerequisites\n\nBefore attempting this problem, you should be comfortable with:\n\n- **Doubly Linked Lists** - Implementing nodes with prev/next pointers for O(1) insertion and removal from both ends\n- **Hash Maps** - Using dictionaries for O(1) key-to-node lookup to enable fast cache access\n- **Data Structure Design** - Combining multiple data structures (hash map + linked list) to achieve desired time complexity for all operations\n\n---\n\n## 1. Brute Force\n\n### Intuition\n\nWe store all `(key, value)` pairs in a list.  \nTo follow **LRU (Least Recently Used)** behavior:\n\n- Whenever we **access** a key, we move it to the **end** of the list (most recently used).\n- When inserting a new key:\n    - If the key already exists \u2192 update its value and move it to the end.\n    - If the cache is full \u2192 remove the **first** element (least recently used).\n    - Then add the new key at the end.\n\n### Algorithm\n\n1. **Initialization**\n    - Store the cache as a list.\n    - Store the capacity.\n\n2. **`get(key)`**\n    - Loop through the list to find the key.\n    - If found:\n        - Remove it from its current position.\n        - Append it to the end (mark as recently used).\n        - Return its value.\n    - If not found, return `-1`.\n\n3. **`put(key, value)`**\n    - Look for the key in the list.\n        - If found:\n            - Remove it.\n            - Update the value.\n            - Append it to the end.\n            - Return.\n    - If not found:\n        - If the cache is full, remove the **first** element.\n        - Append `[key, value]` to the end.\n\n::tabs-start\n\n```python\nclass LRUCache:\n\n    def __init__(self, capacity: int):\n        self.cache = []\n        self.capacity = capacity\n\n    def get(self, key: int) -> int:\n        for i in range(len(self.cache)):\n            if self.cache[i][0] == key:\n                tmp = self.cache.pop(i)\n                self.cache.append(tmp)\n                return tmp[1]\n        return -1\n\n    def put(self, key: int, value: int) -> None:\n        for i in range(len(self.cache)):\n            if self.cache[i][0] == key:\n                tmp = self.cache.pop(i)\n                tmp[1] = value\n                self.cache.append(tmp)\n                return\n\n        if self.capacity == len(self.cache):\n            self.cache.pop(0)\n\n        self.cache.append([key, value])\n```\n\n```java\npublic class LRUCache {\n\n    private ArrayList<int[]> cache;\n    private int capacity;\n\n    public LRUCache(int capacity) {\n        this.cache = new ArrayList<>();\n     ",
+  "starterCode": {
+   "python": "class LRUCache:\n\n    def __init__(self, capacity: int):\n        \n\n    def get(self, key: int) -> int:\n        \n\n    def put(self, key: int, value: int) -> None:\n        \n"
+  },
+  "submissionCount": 265945,
+  "acceptedCount": 126948,
+  "test_cases": [],
+  "test_case_count": 30
+ }
+}

@@ -1,0 +1,5 @@
+[
+  { "slug": "two-sum", "number": 1, "title": "Two Sum", "difficulty": "Easy" },
+  { "slug": "group-anagrams", "number": 49, "title": "Group Anagrams", "difficulty": "Medium" },
+  { "slug": "valid-parentheses", "number": 20, "title": "Valid Parentheses", "difficulty": "Easy" }
+]

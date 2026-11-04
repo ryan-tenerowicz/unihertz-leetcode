@@ -1,0 +1,46 @@
+{
+ "data": {
+  "id": "invert-a-binary-tree",
+  "tag": "NeetCode150",
+  "has_article": true,
+  "name": "Invert Binary Tree",
+  "description": "You are given the root of a binary tree `root`. Invert the binary tree and return its root.\n\n**Example 1:**\n\n![](https://imagedelivery.net/CLfkmk9Wzy8_9HRyug4EVA/ac124ee6-207f-41f6-3aaa-dfb35815f200/public)\n\n```java\nInput: root = [1,2,3,4,5,6,7]\n\nOutput: [1,3,2,7,6,5,4]\n```\n\n**Example 2:**\n\n![](https://imagedelivery.net/CLfkmk9Wzy8_9HRyug4EVA/e39e8d4f-9946-4f99-ee3d-0d4df08d4d00/public)\n\n```java\nInput: root = [3,2,1]\n\nOutput: [3,1,2]\n```\n\n**Example 3:**\n\n```java\nInput: root = []\n\nOutput: []\n```\n\n**Constraints:**\n* `0 <= The number of nodes in the tree <= 100`.\n* `-100 <= Node.val <= 100`\n\n\n<br>\n<br>\n<details class=\"hint-accordion\">\n    <summary>Topics</summary>\n    <div class=\"company-tags-container\">\n    <br>\n      <a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/tree\" target=\"_blank\">Tree</a>\n<a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/depth-first-search\" target=\"_blank\">Depth-First Search</a>\n<a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/breadth-first-search\" target=\"_blank\">Breadth-First Search</a>\n<a class=\"button company-tag-reveal-btn\" href=\"/practice/problem-list/binary-tree\" target=\"_blank\">Binary Tree</a>\n    </div>\n</details>\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Recommended Time & Space Complexity</summary>\n    <p>\n    You should aim for a solution with <code>O(n)</code> time and <code>O(n)</code> space, where <code>n</code> is the number of nodes in the tree.\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 1</summary>\n    <p>\n    From the diagram, you can see that the left and right children of every node in the tree are swapped. Can you think of a way to achieve this recursively? Maybe an algorithm that is helpful to traverse the tree.\n    </p>\n</details>\n\n<br>\n<details class=\"hint-accordion\">  \n    <summary>Hint 2</summary>\n    <p>\n    We can use the Depth First Search (DFS) algorithm. At each node, we swap its left and right children by swapping their pointers. This inverts the current node, but every node in the tree also needs to be inverted. To achieve this, we recursively visit the left and right children and perform the same operation. If the current node is <code>null</code>, we simply return.\n    </p>\n</details>\n\n\n<br>\n<details class=\"company-tags-accordion\">\n    <summary>Company Tags</summary>\n    <div class=\"company-tags-container\">\n    <br>\n      <a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Bloomberg\" target=\"_blank\">Bloomberg<span class=\"company-tag-count\">6</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Google\" target=\"_blank\">Google<span class=\"company-tag-count\">3</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/LinkedIn\" target=\"_blank\">LinkedIn<span class=\"company-tag-count\">3</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Meta\" target=\"_blank\">Meta<span class=\"company-tag-count\">3</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Amazon\" target=\"_blank\">Amazon<span class=\"company-tag-count\">2</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Josh%20Technology\" target=\"_blank\">Josh Technology<span class=\"company-tag-count\">2</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Microsoft\" target=\"_blank\">Microsoft<span class=\"company-tag-count\">2</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Oracle\" target=\"_blank\">Oracle<span class=\"company-tag-count\">2</span></a>\n<a class=\"button company-tag-reveal-btn\" href=\"https://neetcode.io/practice/company/Palo%20Alto%20Networks\" target=\"_blank\">Palo Alto Networks<span class=\"company-tag-count\">2</span></a>\n    </div>\n</details>",
+  "difficulty": "Easy",
+  "free": true,
+  "test_case_type": "function",
+  "custom_test_cases": [
+   "root=[4,2,7,1,3,6,9]",
+   "root=[2,1,3]",
+   "root=[]"
+  ],
+  "allow_customize": true,
+  "availableLanguages": [
+   "python",
+   "java",
+   "cpp",
+   "javascript",
+   "typescript",
+   "csharp",
+   "go",
+   "kotlin",
+   "swift",
+   "rust"
+  ],
+  "topics": [
+   "Tree",
+   "Depth-First Search",
+   "Breadth-First Search",
+   "Binary Tree"
+  ],
+  "free_company_tags": true,
+  "video": "## Video Explanation\n\n<div\nclass=\"video-container\"\nstyle=\"margin-top: 20px; position: relative; overflow: hidden\"\n>\n<iframe\nclass=\"video\"\nsrc=\"https://www.youtube.com/embed/OnSn2XEQ4MY?rel=0\"\ntitle=\"Vimeo video player\"\nframeborder=\"0\"\nallow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture\"\nallowfullscreen\n>\n</iframe>\n</div>",
+  "article_body": "## Prerequisites\n\nBefore attempting this problem, you should be comfortable with:\n\n- **Binary Trees** - Understanding tree node structure with left and right children\n- **Breadth-First Search (BFS)** - Level-by-level traversal using a queue\n- **Depth-First Search (DFS)** - Recursive traversal of tree structures\n- **Stack-based Iteration** - Converting recursive DFS to iterative form using an explicit stack\n\n---\n\n## 1. Breadth First Search\n\n### **Intuition**\n\nTo invert (mirror) a binary tree, every node must swap its **left** and **right** children. Using **Breadth-First Search (BFS)**, we process the tree level-by-level:\n\n- Start from the root.\n- For each node, **swap** its children.\n- Then push the (new) left and right children into the queue.\n- Continue until every node has been processed.\n\nThis approach ensures that every node is visited exactly once and inverted immediately when encountered.\n\n---\n\n### **Algorithm**\n\n1. If the tree is empty, return `null`.\n2. Initialize a queue and insert the `root` node.\n3. While the queue is not empty:\n    - Remove the front node.\n    - Swap its `left` and `right` children.\n    - If the `left` child exists, add it to the queue.\n    - If the `right` child exists, add it to the queue.\n4. After all nodes are processed, return the `root` as the inverted tree.\n\n\n<br>\n\n::tabs-start\n\n```python\n# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\n\nclass Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        if not root:\n            return None\n        queue = deque([root])\n        while queue:\n            node = queue.popleft()\n            node.left, node.right = node.right, node.left\n            if node.left:\n                queue.append(node.left)\n            if node.right:\n                queue.append(node.right)\n        return root\n```\n\n```java\n/**\n * Definition for a binary tree node.\n * public class TreeNode {\n *     int val;\n *     TreeNode left;\n *     TreeNode right;\n *     TreeNode() {}\n *     TreeNode(int val) { this.val = val; }\n *     TreeNode(int val, TreeNode left, TreeNode right) {\n *         this.val = val;\n *         this.left = left;\n *         this.right = right;\n *     }\n * }\n */\n\npublic class Solution {\n    public TreeNode invertTree(TreeNode root) {\n        if (root == null) {\n            return null;\n        }\n        Queue<TreeN",
+  "starterCode": {
+   "python": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\n\nclass Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        "
+  },
+  "submissionCount": 383978,
+  "acceptedCount": 319845,
+  "test_cases": [],
+  "test_case_count": 20
+ }
+}

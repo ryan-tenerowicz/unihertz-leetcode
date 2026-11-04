@@ -1,0 +1,126 @@
+{
+ "status": "OK",
+ "result": [
+  {
+   "id": 395033187,
+   "contestId": 2261,
+   "creationTimeSeconds": 1792258463,
+   "relativeTimeSeconds": 10763,
+   "problem": {
+    "contestId": 2261,
+    "index": "H",
+    "name": "Oh Tree Tree Tree, No Need to Leave",
+    "type": "PROGRAMMING",
+    "points": 4500.0,
+    "rating": 3500,
+    "tags": [
+     "bitmasks",
+     "communication",
+     "constructive algorithms",
+     "dfs and similar",
+     "interactive",
+     "trees"
+    ]
+   },
+   "author": {
+    "contestId": 2261,
+    "participantId": 248609062,
+    "members": [
+     {
+      "handle": "tourist"
+     }
+    ],
+    "participantType": "CONTESTANT",
+    "ghost": false,
+    "room": 199,
+    "startTimeSeconds": 1792247700
+   },
+   "programmingLanguage": "C++23 (GCC 14-64, msys2)",
+   "verdict": "OK",
+   "testset": "TESTS",
+   "passedTestCount": 55,
+   "timeConsumedMillis": 250,
+   "memoryConsumedBytes": 0
+  },
+  {
+   "id": 395018055,
+   "contestId": 2261,
+   "creationTimeSeconds": 1792254948,
+   "relativeTimeSeconds": 7248,
+   "problem": {
+    "contestId": 2261,
+    "index": "F1",
+    "name": "Plegma II: Ask Me Any Cell (Easy Version)",
+    "type": "PROGRAMMING",
+    "points": 2500.0,
+    "rating": 2500,
+    "tags": [
+     "constructive algorithms",
+     "greedy",
+     "math"
+    ]
+   },
+   "author": {
+    "contestId": 2261,
+    "participantId": 248609062,
+    "members": [
+     {
+      "handle": "tourist"
+     }
+    ],
+    "participantType": "CONTESTANT",
+    "ghost": false,
+    "room": 199,
+    "startTimeSeconds": 1792247700
+   },
+   "programmingLanguage": "C++23 (GCC 14-64, msys2)",
+   "verdict": "OK",
+   "testset": "TESTS",
+   "passedTestCount": 2,
+   "timeConsumedMillis": 0,
+   "memoryConsumedBytes": 0
+  },
+  {
+   "id": 395006205,
+   "contestId": 2261,
+   "creationTimeSeconds": 1792252881,
+   "relativeTimeSeconds": 5181,
+   "problem": {
+    "contestId": 2261,
+    "index": "G",
+    "name": "1 2 3 and XOR, Where Did Everybody Go?",
+    "type": "PROGRAMMING",
+    "points": 4000.0,
+    "rating": 2800,
+    "tags": [
+     "bitmasks",
+     "data structures",
+     "divide and conquer",
+     "dp",
+     "greedy",
+     "sortings",
+     "two pointers"
+    ]
+   },
+   "author": {
+    "contestId": 2261,
+    "participantId": 248609062,
+    "members": [
+     {
+      "handle": "tourist"
+     }
+    ],
+    "participantType": "CONTESTANT",
+    "ghost": false,
+    "room": 199,
+    "startTimeSeconds": 1792247700
+   },
+   "programmingLanguage": "C++23 (GCC 14-64, msys2)",
+   "verdict": "OK",
+   "testset": "TESTS",
+   "passedTestCount": 33,
+   "timeConsumedMillis": 5093,
+   "memoryConsumedBytes": 5939200
+  }
+ ]
+}

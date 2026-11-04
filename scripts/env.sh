@@ -99,6 +99,10 @@ require_device() {
     adb devices -l >&2
     [ -z "${ANDROID_SERIAL:-}" ] && exit 1
   fi
+  # The phone's global log level can be INFO (log.tag=I), which hides our debug lines.
+  adb shell setprop log.tag.TitanCode V >/dev/null 2>&1 || true
+  adb shell setprop log.tag.TitanProbe V >/dev/null 2>&1 || true
+  adb shell setprop log.tag.TitanRunner V >/dev/null 2>&1 || true
 }
 
 timestamp() { date +%Y%m%d-%H%M%S; }

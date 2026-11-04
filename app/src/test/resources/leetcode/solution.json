@@ -1,0 +1,21 @@
+{
+ "data": {
+  "ugcArticleSolutionArticle": {
+   "title": "\ud83d\udd25Python || Easily Understood \u2705 || Hash Table || Fast ||  Simple",
+   "content": "**Appreciate if you could upvote this solution**\\n\\n\\nMethod: `Hash Table`\\n\\nSince the output needs to group the anagrams, it is suitable to use `dict` to store the different anagrams.\\nThus, we need to find a common `key` for those anagrams.\\nAnd one of the best choices is the `sorted string` as all the anagrams have the same anagrams.\\n\\n![image](https://assets.leetcode.com/users/images/69dc8218-5820-42a0-977c-d278e97b6dd1_1659719811.9147549.png)\\n\\n\\n\\n```\\nclass Solution:\\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\\n        strs_table = {}\\n\\n        for string in strs:\\n            sorted_string = \\'\\'.join(sorted(string))\\n\\n            if sorted_string not in strs_table:\\n                strs_table[sorted_string] = []\\n\\n            strs_table[sorted_string].append(string)\\n\\n        return list(strs_table.values())\\n```\\nTime complexity: `O(m*nlogn))`\\nSpace complexity: `O(n)`\\n<br/>",
+   "author": {
+    "userName": "wingskh"
+   },
+   "reactions": [
+    {
+     "count": 197,
+     "reactionType": "UPVOTE"
+    },
+    {
+     "count": 0,
+     "reactionType": "THUMBS_DOWN"
+    }
+   ]
+  }
+ }
+}
