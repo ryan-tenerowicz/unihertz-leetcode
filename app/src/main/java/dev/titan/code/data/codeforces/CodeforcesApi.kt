@@ -85,6 +85,7 @@ object CodeforcesApi {
             ins.zip(outs)
         }
         header?.remove()
+        unMathJax(st)
         // Absolute image URLs, so they can be saved for offline (PLAN §8.2).
         st.select("img[src]").forEach { it.attr("src", it.absUrl("src")) }
         st.select("div.section-title").forEach { it.tagName("h3") }
@@ -142,6 +143,72 @@ object CodeforcesApi {
 
     fun sampleOutputs(metaData: String): List<String> =
         runCatching { JSONObject(metaData).getJSONArray("outputs").let { a -> (0 until a.length()).map { a.getString(it) } } }.getOrDefault(emptyList())
+
+    // ---- MathJax output back to text (rev 30) -------------------------------------------------
+
+    private val D3 = "\$\$\$"
+
+    /**
+     * The hidden browser runs the page's MathJax before the statement is read, so each formula
+     * arrives drawn twice: MathJax's HTML-CSS glyphs (in a font the app doesn't have) and a MathML
+     * copy for screen readers that the site hides with its own CSS. Both showed, as "ɑ a". Each
+     * drawn formula is replaced by its TeX source as `$$$…$$$` (from the `math/tex` script MathJax
+     * keeps after it) for [tex], or, without one, by readable text from its MathML ([mathText]).
+     */
+    fun unMathJax(root: Element) {
+        root.select(".MathJax_Preview").remove()
+        for (frame in root.select("div.MathJax_Display, span.MathJax, span.MathJax_SVG, span.MathJax_CHTML")) {
+            if (frame.root() !== root.root()) continue // inside a display block already replaced
+            val display = frame.tagName() == "div"
+            val script = frame.nextElementSibling()?.takeIf { it.tagName() == "script" && it.attr("type").startsWith("math/tex") }
+            if (script != null) {
+                script.remove()
+                frame.replaceWith(TextNode(if (script.attr("type").contains("mode=display")) "$D3$D3${script.data()}$D3$D3" else "$D3${script.data()}$D3"))
+                continue
+            }
+            val math = frame.selectFirst("math") ?: frame.attr("data-mathml").takeIf(String::isNotEmpty)?.let { Jsoup.parseBodyFragment(it).selectFirst("math") }
+            if (math == null) { frame.remove(); continue }
+            val out = Element(if (display) "div" else "span").addClass("math")
+            out.append(mathText(math))
+            frame.replaceWith(out)
+        }
+        // Not drawn yet: MathJax's preprocessor has already moved the TeX into scripts.
+        for (script in root.select("script[type^=math/tex]")) {
+            val d = script.attr("type").contains("mode=display")
+            script.replaceWith(TextNode(if (d) "$D3$D3${script.data()}$D3$D3" else "$D3${script.data()}$D3"))
+        }
+    }
+
+    /** MathML as the same readable HTML [texBody] makes: sub/superscripts, (a)/(b), √(x). */
+    fun mathText(e: Element): String {
+        fun kids() = e.children().joinToString("") { mathText(it) }
+        fun kid(i: Int) = e.children().getOrNull(i)?.let(::mathText) ?: ""
+        return when (e.tagName().lowercase()) {
+            "mi", "mn", "mo", "mtext", "ms" -> HtmlClean.escape(e.text())
+            "mspace" -> " "
+            "msup" -> kid(0) + "<sup>${kid(1)}</sup>"
+            "msub" -> kid(0) + "<sub>${kid(1)}</sub>"
+            "msubsup" -> kid(0) + "<sub>${kid(1)}</sub><sup>${kid(2)}</sup>"
+            "mfrac" -> "(${kid(0)})/(${kid(1)})"
+            "msqrt" -> "√(${kids()})"
+            "mroot" -> "√(${kid(0)})"
+            "mover" -> kid(0) + if (kid(1) == "¯" || kid(1) == "‾") "̅" else "<sup>${kid(1)}</sup>"
+            "munder" -> kid(0) + "<sub>${kid(1)}</sub>"
+            "annotation", "annotation-xml" -> ""
+            else -> kids()
+        }
+    }
+
+    /**
+     * Repairs a statement saved before rev 30, which still holds MathJax's drawing and MathML
+     * (the TeX scripts were cleaned away). Returns null when there's nothing to repair.
+     */
+    fun repairSavedMath(html: String): String? {
+        if (!html.contains("MathJax")) return null
+        val body = Jsoup.parseBodyFragment(html).body()
+        unMathJax(body)
+        return body.html()
+    }
 
     // ---- TeX ($$$…$$$) to plain HTML ----------------------------------------------------------
 

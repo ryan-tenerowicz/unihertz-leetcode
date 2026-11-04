@@ -1,4 +1,4 @@
-# Pinned for the toolchain in PLAN §11: AGP 8.7.3, Kotlin 2.1.0, Gradle 8.11.1, JDK 21.
+# Pinned for the toolchain in PLAN §14: AGP 8.7.3, Kotlin 2.1.0, Gradle 8.11.1, JDK 21.
 # Upgrading any of these is a deliberate step, recorded in PROGRESS.md.
 [versions]
 agp = "8.7.3"
@@ -18,7 +18,7 @@ coroutines = "1.9.0"
 lifecycle = "2.8.7"
 # M4 local runner. 17.2 supports AGP 7.3–9.5 and Python 3.10–3.15.
 chaquopy = "17.2.0"
-# 2.9.x builds with compileSdk 35 (2.10 needs 35+ too, but newer AGP).
+# 2.10 handles Android 15's limit on long foreground downloads (offline packs); builds with compileSdk 35.
 work = "2.10.0"
 okhttp = "4.12.0"
 # Rev 13: Codeforces statements are HTML pages; parsed (and unit-tested) with jsoup.

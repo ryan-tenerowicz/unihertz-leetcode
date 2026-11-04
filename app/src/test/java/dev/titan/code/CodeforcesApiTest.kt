@@ -74,4 +74,24 @@ class CodeforcesApiTest {
         val c = runCatching { CodeforcesApi.parseStatement("<html><head><title>Just a moment...</title></head></html>", "cf:4A") }.exceptionOrNull()
         assertEquals("Codeforces asked for a browser check", c?.message)
     }
+
+    /** Rev 30: MathJax had already drawn the maths, so each variable showed twice ("ɑ a"). */
+    @Test fun mathJaxOutputBecomesText() {
+        // As saved before rev 30 (from cf:2276A): the drawing plus the MathML copy, no TeX script.
+        val saved = """<p>Monocarp has <span class="MathJax_Preview" style="color: inherit;"></span><span class="MathJax" id="MathJax-Element-1-Frame" data-mathml="&lt;math&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;/math&gt;"><nobr aria-hidden="true"><span class="math"><span class="mi" style="font-family: MathJax_Math-italic;">a</span></span></nobr><span class="MJX_Assistive_MathML"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>a</mi></math></span></span> slices.</p>"""
+        val fixed = CodeforcesApi.repairSavedMath(saved)!!
+        assertEquals("<p>Monocarp has <span class=\"math\">a</span> slices.</p>", fixed.replace("\n", ""))
+        assertEquals(null, CodeforcesApi.repairSavedMath("<p>no maths</p>"))
+
+        // A fresh page: the TeX script after the drawing wins, so the usual TeX conversion applies.
+        val page = """<html><body><div class="problem-statement"><div class="header"><div class="title">A. T</div></div><p>Let <span class="MathJax_Preview"></span><span class="MathJax"><nobr>x</nobr></span><script type="math/tex">1 \le n_i \le 10^9</script> and</p><div class="MathJax_Display"><span class="MathJax"><nobr>y</nobr></span></div><script type="math/tex; mode=display">a+b</script></div></body></html>"""
+        val html = CodeforcesApi.parseStatement(page, "cf:1A").detail.contentHtml!!
+        assertTrue(html, html.contains("<span class=\"math\">1 ≤ n<sub>i</sub> ≤ 10<sup>9</sup></span>"))
+        assertTrue(html, html.contains("<div class=\"math\">a+b</div>"))
+        assertFalse(html, html.contains("MathJax") || html.contains("nobr"))
+
+        // MathML structure keeps sub/superscripts and fractions.
+        val m = org.jsoup.Jsoup.parseBodyFragment("<math><msub><mi>a</mi><mi>i</mi></msub><mo>≤</mo><msup><mn>10</mn><mn>9</mn></msup><mfrac><mi>p</mi><mi>q</mi></mfrac></math>").selectFirst("math")!!
+        assertEquals("a<sub>i</sub>≤10<sup>9</sup>(p)/(q)", CodeforcesApi.mathText(m))
+    }
 }

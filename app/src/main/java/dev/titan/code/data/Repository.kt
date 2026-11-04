@@ -196,7 +196,17 @@ class Repository(
     // ---- problems (PLAN §8.2) -------------------------------------------------------------
 
     /** The saved detail, or null if it was never saved. */
-    suspend fun savedDetail(slug: String): ProblemDetail? = withContext(Dispatchers.IO) { dao.detail(pv(slug), slug)?.toModel() }
+    suspend fun savedDetail(slug: String): ProblemDetail? = withContext(Dispatchers.IO) {
+        var row = dao.detail(pv(slug), slug) ?: return@withContext null
+        // Rev 30: Codeforces statements saved with MathJax's double drawing are repaired once, offline.
+        if (row.provider == Platform.CODEFORCES.id) {
+            row.contentHtml?.let(CodeforcesApi::repairSavedMath)?.let { fixed ->
+                row = row.copy(contentHtml = fixed)
+                dao.upsertDetail(row)
+            }
+        }
+        row.toModel()
+    }
 
     /** True if the saved copy is a bundled sample that the real statement should replace. */
     suspend fun isPlaceholder(slug: String): Boolean = withContext(Dispatchers.IO) { dao.detail(pv(slug), slug)?.fetchedAt == 0L }

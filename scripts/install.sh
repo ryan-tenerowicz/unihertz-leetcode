@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the debug APK, install it on the connected phone, and launch it.
-# Usage: scripts/install.sh [app|probe]          (default: app once it exists)
+# Usage: scripts/install.sh [app|probe]          (default: app)
 #        scripts/install.sh app --no-build      (reinstall the last build)
 set -euo pipefail
 source "$(dirname "$0")/env.sh"

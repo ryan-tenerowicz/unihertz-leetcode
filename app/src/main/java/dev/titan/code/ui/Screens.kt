@@ -127,7 +127,7 @@ fun SettingsScreen(s: SettingsState, a: SettingsActions, mono: FontFamily) {
         if (s.username != null) {
             Line("LeetCode: ${s.username}") { Button("Sign out", onClick = a::signOut) }
         } else {
-            Line("LeetCode: not signed in. Adds Run/Submit, solved marks and Premium problems. Username and password.") {
+            Line("LeetCode: not signed in. Adds Run/Submit and solved marks. Username and password.") {
                 Button("Sign in", enabled = s.online, onClick = a::signIn)
             }
         }
@@ -276,7 +276,7 @@ fun SetupScreen(
             "Settings → Shortcut keys → PTT key → PTT app = Coding. The red button then switches Problem ↔ Code." +
                 if (pttApp == null) " (Couldn't read the setting; check it by hand.)" else "",
         )
-        Step("Sign in to LeetCode (optional)", username != null, if (username != null) "Signed in as $username." else "Adds solved marks and Premium problems. Username and password only.") {
+        Step("Sign in to LeetCode (optional)", username != null, if (username != null) "Signed in as $username." else "Adds Run/Submit and solved marks. Username and password only.") {
             if (username == null) Button("Sign in", enabled = online, onClick = onSignIn)
         }
         Step("Download the problem list", listSize > 100, listStatus ?: if (listSize > 100) "$listSize problems saved." else "About 40 small requests. Statements save as you open them.") {

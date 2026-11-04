@@ -2,6 +2,8 @@
 
 Source data: `reports/probe-20261101-200140/` (guided run, 70 of 85 results), `reports/adb-20261101-201016/` (adb checks plus a later all-tables settings diff), and Free log sessions recorded on 2026-11-01. Device: Titan 2 Elite, Android 16 (SDK 36), build `Titan 2 Elite_V02.00.04`, 1076×1200 at 300 dpi, default IME `com.iqqijni.bbkeyboard` (the Unihertz keyboard).
 
+> Written at the end of Phase 0 (2026-11-01). Section references (§…, Appendix B) point to the plan as it was then; [`PLAN.md`](../PLAN.md) now describes the finished app, with these findings in §2, §5.2 and §6.
+
 **Summary**
 
 - The physical keyboard's Alt characters come from the key map (`TitanKey.kcm`), so with `TYPE_NULL` the app gets every printed symbol from `getUnicodeChar()` with no IME involved.

@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# Copy a report + logcat from the phone into reports/.
-#   probe: Download/titan-probe/            → reports/probe-<time>/       (+ reports/latest)
-#   app:   Download/titan-code-acceptance/  → reports/acceptance-<time>/  (+ reports/acceptance-latest)
-# Save the report in the app first (the probe and the acceptance panel also save when a run ends).
-# Usage: scripts/pull-report.sh [app|probe]     (default: app once it exists)
+# Copy the Key & Gesture Probe's report + logcat from the phone into reports/.
+#   Download/titan-probe/ → reports/probe-<time>/ (+ reports/latest)
+# The probe saves its report when a guided run ends. The app writes no report; use scripts/logcat.sh.
+# Usage: scripts/pull-report.sh
 set -uo pipefail
 source "$(dirname "$0")/env.sh"
 cd "$REPO_ROOT"
-MODULE="${1:-$(default_module)}"
-resolve_module "$MODULE"
+if [ "${1:-probe}" != probe ]; then echo "Only the probe writes a report (scripts/pull-report.sh). For the app, use scripts/logcat.sh." >&2; exit 1; fi
+resolve_module probe
 require_device
 
-if [ "$MODULE" = app ]; then PREFIX=acceptance; LINK=reports/acceptance-latest; FILES="acceptance-report.json acceptance-report.md"
-else PREFIX=probe; LINK=reports/latest; FILES="titan-probe-report.json titan-probe-report.md"; fi
+PREFIX=probe; LINK=reports/latest; FILES="titan-probe-report.json titan-probe-report.md"
 
 OUT="reports/$PREFIX-$(timestamp)"
 mkdir -p "$OUT"

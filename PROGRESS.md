@@ -1,140 +1,92 @@
 # Titan Code: progress
 
-This file tracks **where we are** against [`PLAN.md`](PLAN.md): what's done, what's next, problems we hit, and every change made to the plan. `PLAN.md` is the design; this is the log.
+[`PLAN.md`](PLAN.md) describes what the app does; this file records **where it stands**: what's confirmed, what still needs checking, the environment, and the history of the work and of the plan.
 
 **How to update:**
-- Keep the milestone table and **Next up** current.
+- Keep **Status** and **Still to check** current.
 - Add new entries to the top of **Work log** and **Plan change log**, with the date.
-- When a problem forces a plan change, record the problem in the work log and the change in the plan change log, then edit PLAN.md.
+- When behaviour changes, update PLAN.md, the README if a feature appears or goes, and [`docs/test-checklist.md`](docs/test-checklist.md).
 
 ---
 
-## Status
+## Status (2026-11-03)
 
-| Milestone | Status | Notes |
-|---|---|---|
-| **M0**: skeleton, scripts, Key & Gesture Probe, device report | ✅ **Done** (2026-11-01) | K11 optional and unrun. Evidence: `docs/device-input-report.md`. |
-| **M1**: editor and input core | ✅ **Done** (2026-11-02): owner walked the M1 test plan ("mostly works as expected"); Find/Go-to removed and saving made silent on request. The real Cursor Assistant fixture is still open (see Next up); the E01–E15 panel run was dropped with the panel (rev 26). | Scope and exit criteria: PLAN §12. |
-| **M2**: read LeetCode, offline-first | 🔨 **Built, owner check pending** (2026-11-02): test with [`docs/m2-test-plan.md`](docs/m2-test-plan.md) | Agent decisions: PLAN rev 9, Appendix B |
-| **M3**: run and submit on LeetCode | 🔨 **Built, owner check pending** (2026-11-02): see [`docs/owner-test-queue.md`](docs/owner-test-queue.md) | Needs a signed-in run to confirm the response parsers |
-| **M4**: local runner and offline packs | 🔨 **Built, owner check pending** (2026-11-02): see the owner test queue | Special types rev 23; limits, checkers and stress tests rev 24; stdin rev 13; Everything packs rev 25 |
-| **M5**: polish | 🔨 **Started** (2026-11-02): word completion built; snippets removed on request (rev 13) | Themes and tuning wait for the owner's use |
-| **M6**: more platforms | 🔨 **Built, owner check pending** (2026-11-02, rev 13): NeetCode (neetcode.io) and Codeforces: browse, read offline, run locally, submit | Needs signed-in runs on both sites to confirm the result parsers and the Codeforces submit form |
+All features described in PLAN.md are built, unit-tested and installed on the owner's phone. **Commits:** the app was committed by the owner on 2026-11-03 ("add app"); work happens on `master`, and is committed only when the owner asks.
 
-**Last commit:** the owner's commit of M1 steps 1–2 and the gesture work (2026-11-01). Steps 3–11 are uncommitted (built 2026-11-02 while the owner was away). **Work on `master`; commit only when the owner asks.**
+| Area | State |
+|---|---|
+| Editor, keys, symbols, keyboard surface, panes, red button | In daily use by the owner; vibration and swipe speed tuned with them |
+| Problem lists, statements, Comments on LeetCode, NeetCode and Codeforces (reading, offline) | Working; Codeforces maths repaired in rev 30 |
+| Local runner: modes, special types, limits, checkers, stress tests | Checked on the phone's Python with `scripts/debug-run.sh` (rev 24) and over the NeetCode 150 |
+| Running and submitting on the sites | Built; **not yet confirmed with a signed-in run** on any site |
+| Offline packs and Everything downloads | Everything on NeetCode ran to completion on the phone (rev 25); LeetCode and Codeforces not yet run |
+| Reading size, practice timer, test-case editor | Working; reading size checked on the phone (rev 28) |
 
----
+## Still to check
 
-## Next up
+The full list is [`docs/test-checklist.md`](docs/test-checklist.md). The ones that matter most:
+1. **Signed-in runs and submits** on LeetCode, NeetCode and Codeforces (checklist §10): they confirm the response parsers and the Codeforces submit form.
+2. **The judge's Python and pre-imported names** (checklist §10): one `sym+E` run on LeetCode printing `sys.version` and `globals()`.
+3. **Everything on LeetCode / Codeforces** (checklist §11): long downloads, rate limits.
+4. **NeetCode sign-in with Google** inside the app's WebView (GitHub is the fallback).
 
-**Running list of owner tests: [`docs/owner-test-queue.md`](docs/owner-test-queue.md)** (owner, rev 10: keep building, don't wait for confirmation).
-
-**M2, with the owner:**
-1. Walk [`docs/m2-test-plan.md`](docs/m2-test-plan.md): setup checklist, list download, filter, open/save offline, Comments, sign-in, Settings, draft history, airplane mode.
-2. Review the rev 9 *agent decisions* (PLAN Appendix B).
-3. Exit check (PLAN §12): in airplane mode, a problem saved earlier opens with statement and comments; drafts survive a force-stop.
-
-**Left over from M1 (not blocking):** record the real Cursor Assistant fixture.
-
-**Next to build (rev 17 roadmap, PLAN §14):**
-1. Fixes from the owner's checks (owner test queue: revs 13–16).
-2. **M7 stage 1 (rest):** block dedent; word/line jumps and move line once the owner agrees to the bindings (`sym+A/F` word, `sym+B/G` line start/end, `sym+Z` dedent, `sym+M` move line).
-3. **M7 stage 2:** live syntax check, then pyflakes warnings, and gutter marks from local runs.
-4. **M7 stage 3:** `sym+Q` peek at examples; highlighted solution code with "open in scratch editor"; compare with draft history, submissions or solutions.
-5. ✅ **M7 stage 4** and ✅ **the offline judge** (rev 24). Left: stress tests for design problems and the special types; more checkers as problems come up.
-7. Later and only if wanted: themes; Codeforces remote run, contests and editorials.
-
-## M1 steps (done)
-
-1. ✅ **Scripts:** add the `app` target to `install.sh`, `doctor.sh`, `logcat.sh` and `pull-report.sh` (PLAN §11).
-2. ✅ **Skeleton, and an early risk check** (passed 2026-11-01, see the work log):
-   - Create the `:app` module (`dev.titan.code`) and the Gradle version catalog.
-   - Add Compose with the compiler plugin, and Sora Editor with `language-textmate`.
-   - Pin versions that build with AGP 8.7.3 / Kotlin 2.1.0 / JDK 21, and record them below.
-   - **Before building anything else:** put a `CodeEditor` subclass on screen with a TYPE_NULL `InputConnection` and pre-IME key handling. Check that typed characters, Backspace and arrows reach it, and that Sora's own input handling doesn't fight it. If it does, record the problem here and switch to the CodeMirror 6 WebView fallback (PLAN §3).
-3. ✅ **Shell** (2026-11-01; red button and keys on other panes still to be checked by the owner):
-   - single activity; status bar hidden; top band beside the camera (reuse the inset logic in `probe/.../ProbeActivity.kt`)
-   - four tabs
-   - bottom status line
-   - Back handling (PLAN §5.1)
-   - key routing on non-Code panes through `MainActivity.dispatchKeyEvent()` (PLAN §5.1)
-4. ✅ **Bundled samples** (2026-11-02): Two Sum, Group Anagrams and Valid Parentheses in `app/src/main/assets/samples/`; the Problem-pane WebView with a sample picker; minimal draft autosave plus one backup file per sample.
-5. ✅ **InputRouter** (2026-11-02):
-   - TYPE_NULL, characters through `getUnicodeChar`
-   - Alt layer; Alt+Shift+S/D/F/Z → `$ % ^ &`
-   - Shift+Backspace forward delete
-   - `sym` leader table, with "Coming in M3/M4" for R/E/S
-   - arrow keys; app-side key repeat
-   - keycode 403 (`fn`) and 404 handling
-   - JVM unit tests for `KeymapEngine`
-6. ✅ **`fn` symbol palette** (2026-11-02; owner check pending, adb can't send `fn`): typing a key closes it and types the key.
-7. ✅ **GestureEngine** (synthetic Cursor Assistant fixture added 2026-11-02; real recording at step 12):
-   - `touchPad` interception in `MainActivity.dispatchTouchEvent()`, with the starting values from PLAN §5.6
-   - fixtures in `app/src/test/resources/phase0/`, trimmed from the guided report
-   - the Cursor Assistant arrow fixture: synthetic for now; record the real one with the owner at step 12
-8. ✅ **Red button** (owner confirmed the shell works, 2026-11-02): keycode 401 toggles Problem/Code; on Results or Comments it goes to Code. Built with the shell in step 3; owner check pending.
-   - ✅ PTT app switched to Titan Code; keycode 401 reaches the app (2026-11-01).
-   - ✅ The red button's "programmable key" is None (`func1_programmable_key_function=0`).
-9. ✅ **Python editing** (PLAN §5.5; 2026-11-02):
-   - auto-pairing, with no pairing inside strings or comments (a one-line scanner, not the TextMate tokens: PLAN rev 8)
-   - smart Enter, smart Backspace
-   - undo grouping for typing
-   - Sora's own auto-indent and pair-closing switched off
-10. ✅ **Find and Go-to-line bars, font size** (`sym+I/O`, saved), **soft-wrap toggle** (`sym+W`, saved; on by default), and the **cheat sheet** (`sym+H`, generated from the keymap).
-11. ✅ **Guided acceptance panel** (removed in rev 26 at the owner's request) (debug builds only, PLAN §10): a collapsible panel inside `MainActivity` over the real shell, with its JSON/Markdown report and `pull-report.sh app`.
-12. **Acceptance:**
-    - Walk through [`docs/m1-test-plan.md`](docs/m1-test-plan.md) (critical user journeys), then run E01–E15 with the owner on the acceptance panel.
-    - Record the Cursor Assistant fixture.
-    - Tune the gesture values and record them below.
+Known limitations are listed in PLAN §15.
 
 ---
 
-## Environment and phone state (2026-11-01)
+## Environment
 
 **Mac:**
-- Temurin JDK 21 at `/Library/Java/JavaVirtualMachines/temurin-21.jdk`. `scripts/env.sh` picks it, because Android Studio's JBR is JDK 25, which Gradle 8.11 can't run on.
-- Android SDK at `~/Library/Android/sdk`, with build-tools 36.0.0 and android-35, which Gradle fetched itself.
+- Temurin JDK 21 at `/Library/Java/JavaVirtualMachines/temurin-21.jdk`; `scripts/env.sh` picks it, because Android Studio's bundled JDK 25 is too new for Gradle 8.11.
+- Android SDK at `~/Library/Android/sdk` (build-tools 36.0.0, android-35, fetched by Gradle).
 - `adb` from Homebrew.
 
 **Phone** (Titan 2 Elite, Android 16, build `Titan 2 Elite_V02.00.04`):
 
-| Setting | Current value | What the app needs |
+| Setting | Value | What the app needs |
 |---|---|---|
 | Scroll Assistant | ON | **ON** (required) |
-| Cursor Assistant | ON | Either. With Scroll Assistant on, its slides arrive as Scroll Assistant strokes and move the cursor the same way. |
-| Red button → Shortcut keys → PTT app | **Titan Code** (`func1_smartkey_ptt_app_picker=dev.titan.code`) | Titan Code ✓ |
+| Cursor Assistant | ON | Either |
+| Red button → Shortcut keys → PTT app | Coding (`func1_smartkey_ptt_app_picker=dev.titan.code`) | This app ✓ |
 | Red button "programmable key" (`func1_programmable_key_function`) | 0 (None) | None ✓ |
-| Keyboard backlight tile | Owner's choice | Not used by the app |
 | Default IME | Unihertz keyboard (`com.iqqijni.bbkeyboard`) | Unchanged |
 
-**Pinned versions** (M1 step 2, in `gradle/libs.versions.toml`):
-- Compose BOM **2025.05.01** (Compose 1.8.2, Material 3 1.3.2). Later BOMs move to compileSdk 36.
-- activity-compose **1.10.1** (1.11 needs compileSdk 36).
-- Sora Editor BOM **0.24.4** (`editor`, `language-textmate`). Its `language-textmate` pulls kotlin-stdlib 2.2.21, the newest that Kotlin 2.1.0 can read. **0.24.5+ needs stdlib 2.3+, and 0.24.7 needs 2.4**, so upgrading Sora means upgrading Kotlin first. Fallback: 0.23.7 (stdlib 2.1.21).
-- Compose compiler plugin: same version as Kotlin (2.1.0).
-- JUnit 4.13.2; OkHttp 4.12.0 (probe only, now through the catalog).
+**Pinned versions** (`gradle/libs.versions.toml`; each comment says why):
+- AGP 8.7.3, Kotlin 2.1.0, Gradle 8.11.1, KSP 2.1.0-1.0.29.
+- Compose BOM 2025.05.01 (Compose 1.8.2, Material 3 1.3.2) and activity-compose 1.10.1: later ones need compileSdk 36.
+- Sora Editor 0.24.4: 0.24.5+ needs kotlin-stdlib 2.3+, so upgrading Sora means upgrading Kotlin first.
+- Room 2.6.1, WorkManager 2.10.0, OkHttp 4.12.0, jsoup 1.18.1, coroutines 1.9.0, lifecycle 2.8.7, JUnit 4.13.2.
+- Chaquopy 17.2.0 with Python 3.14; `sortedcontainers` 2.4.0 vendored in `app/src/main/python/`.
 
-**Gesture tuning** (fill in during M1 step 12):
-- Starting values are in PLAN §5.6.
-- 2026-11-01 (owner, step 2 try-out): vertical slowed from 60 to **90 px/line**; horizontal slowed from 40 to 60, then to **70 px/char** (acceleration unchanged, up to 4×). Owner: "for now this is good". Both become adjustable settings in M2 (PLAN §5.6). Horizontal swipes now stop at the line's start or end.
-
----
-
-## Open questions for the owner
-
-| Question | Raised | Blocks |
-|---|---|---|
-| Should word-wise movement and move-line-up/down get a leader letter? Their gestures proved impossible (G06/G07). | 2026-11-01 | Nothing |
-| Does `=` need a keyboard binding after trying the `fn` palette? | 2026-11-01 | Nothing; decide after using M1 |
-| Run K11 (per-letter Unihertz shortcuts)? It only matters if those shortcuts are enabled. | 2026-11-01 | Nothing |
-| `sym+F` and `sym+G` are free since Find/Go-to were removed. Use one for block dedent, or keep them free? | 2026-11-02 | Nothing |
-| Should **dedenting** a selected block get a leader letter (`sym+Z` is free)? `sym+Space` now indents a selected block (rev 8). Dedent at the start of a line is covered by smart Backspace. | 2026-11-01 (M1 review); narrowed 2026-11-02 | Nothing |
-| Review the *agent decisions* of revision 8 (PLAN Appendix B), made while the owner was away | 2026-11-02 | Nothing |
-| Problem pane surface-scroll direction: drag-style (finger up = content up). Flip it? | 2026-11-02 | Nothing |
+**Tuned values** (PLAN §6): 70 px per character and 90 px per line by default (the owner slowed both from 40 and 60 in M1); vibration Normal 6–16 ms and Strong 9–40 ms.
 
 ---
 
 ## Work log
+
+### 2026-11-03 (rev 30): consistency pass; one test checklist; Codeforces maths fixed
+
+**Owner asked:** clean up the test plan files, make the plan and README consistent so others can understand and work on the project, and fix any mistakes found.
+
+**Test plans:** `docs/m1-test-plan.md`, `docs/m2-test-plan.md` and `docs/owner-test-queue.md` are replaced by one [`docs/test-checklist.md`](docs/test-checklist.md), grouped by feature and describing only current behaviour. Dropped or corrected on the way: the 10 s time limit (now 3 s per case), Clone Graph "not supported locally" (it is now), the Faint/Light vibration levels (now Normal/Strong), the Review chip, the bundled-sample picker, Back sending the app to the background, and "coming in M3/M4" messages. Results already seen on the phone are marked *confirmed*. Older log entries below mention the removed files; their links now point to the checklist.
+
+**PROGRESS:** the top is rewritten: status by area, what still needs checking, environment and pinned versions. Removed: the milestone table, M1 step list, the M7 roadmap and the open questions about unbuilt bindings.
+
+**Mistakes fixed in the app:**
+- **Codeforces maths showed every variable twice** ("ɑ a"). The hidden browser runs the page's MathJax before the statement is read, so each formula arrived as MathJax's drawing (in a font the app lacks) plus the screen-reader MathML copy that the site hides with its own CSS. `CodeforcesApi.unMathJax` now replaces each drawn formula with its TeX source (`math/tex` script → `$$$…$$$` → the existing TeX-to-text conversion), or with text built from its MathML (`mathText`: sub/superscripts, fractions, roots). 1,175 of the 1,177 saved statements were affected; `Repository.savedDetail` repairs one when it's opened (`repairSavedMath`, offline, no re-download). On the real saved 2276A: 22 KB → 4 KB, "a slices of cheese and b slices", "1≤t≤10<sup>4</sup>". Test: `CodeforcesApiTest.mathJaxOutputBecomesText`.
+- The cheat sheet called `sym+Space` "Indent (complete, from M5)": now "Accept the completion, or indent".
+- Settings and the setup checklist said LeetCode sign-in "adds Premium problems", but Premium problems are hidden: now "Adds Run/Submit and solved marks".
+- `scripts/pull-report.sh app` tried to pull the removed panel's report: the script is now probe-only and points to `scripts/logcat.sh` for the app; stale "(default: app once it exists)" comments fixed.
+
+**Docs:** PLAN and README checked against the code again (see the change log row).
+
+### 2026-11-03 (rev 29): README and PLAN rewritten to the current app
+
+**Owner asked:** rewrite the README and the plan to describe the app as it is now, dropping features that aren't built.
+
+**Done:** `PLAN.md` is now a description of the built app (1,072 → 451 lines): goal, device, architecture, panes, problem list, editor and keys, keyboard surface, the three sites, running and test cases, local runner (modes, special types, limits, checkers, stress tests), offline storage and packs, practice timer, Settings, testing, build, known limitations. Removed: revision notes (they stay in the change log below), the Phase 0 test plan (kept in `docs/device-input-report.md` and `docs/PROBE.md`), the acceptance tests, milestones, the M7 roadmap and other unbuilt ideas, open questions and Appendices A and B (decisions are recorded in this file's work log). Corrected against the code: no bundled KaTeX, no smart-colon setting, save-on-open default 5, 20 solution titles with 3 bodies, Results scrolls with the keyboard surface. `README.md` now lists the features, phone setup and build steps.
+
+**Note:** older entries in this file cite PLAN section numbers from before the rewrite (§7.1 limits is now §9.2, and so on).
 
 ### 2026-11-03 (rev 28): the reading size scales the panes' controls too
 
@@ -408,7 +360,7 @@ The owner walked the M1 test plan: mostly as expected. Asked for: remove Find an
 
 ### 2026-11-02: M1 steps 4–11 (built while the owner was away)
 
-The owner confirmed step 3 works on the phone, said the indentation plan (smart Enter/Backspace, `sym+Space`) was fine as planned, and asked me to build as much as possible, make and document decisions, and finish with a test plan. **Test plan: [`docs/m1-test-plan.md`](docs/m1-test-plan.md).**
+The owner confirmed step 3 works on the phone, said the indentation plan (smart Enter/Backspace, `sym+Space`) was fine as planned, and asked me to build as much as possible, make and document decisions, and finish with a test plan. **Test plan:** `docs/m1-test-plan.md` (since replaced by [`docs/test-checklist.md`](docs/test-checklist.md)).
 
 **Done**
 - **Step 4, samples and drafts:**
@@ -617,6 +569,8 @@ Stale text fixed:
 
 | Date | Revision | What changed | Why |
 |---|---|---|---|
+| 2026-11-03 | **30** | Consistency pass: one test checklist replaces the three test files; PLAN and README links and details corrected; Codeforces maths (§7.3) | Owner request |
+| 2026-11-03 | **29** | PLAN rewritten as a description of the current app; unbuilt features, roadmap, Phase 0 test plan and appendices dropped; README rewritten | Owner request |
 | 2026-11-03 | **28** | §4.2 reading size scales whole panes (controls with the text); chip rows wrap | Owner request |
 | 2026-11-03 | **27** | §14.2 review queue removed; §4.2 reading text size for the Problem and Comments panes (`sym+I/O` there, Settings) | Owner request |
 | 2026-11-03 | **26** | Guided acceptance panel removed (§3, §10 kept as history; §14 drops the E01–E15 run) | Owner request |

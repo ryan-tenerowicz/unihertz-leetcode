@@ -30,7 +30,7 @@ enum class Leader(val keyCode: Int, val keyLabel: String, val label: String, val
     SOFT_WRAP(KeyEvent.KEYCODE_W, "W", "Toggle soft wrap", true),
     CHEAT_SHEET(KeyEvent.KEYCODE_H, "H", "Cheat sheet", false),
     RESET(KeyEvent.KEYCODE_N, "N", "Reset to starter code (press twice)", true),
-    INDENT(KeyEvent.KEYCODE_SPACE, "Space", "Indent (complete, from M5)", true);
+    INDENT(KeyEvent.KEYCODE_SPACE, "Space", "Accept the completion, or indent", true);
 
     companion object {
         private val byKey = entries.associateBy { it.keyCode }

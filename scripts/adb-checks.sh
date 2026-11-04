@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PLAN.md §9.3 A: device checks over adb (no app needed). Saves everything under reports/adb-<time>/.
+# Phase 0 device checks over adb (no app needed; see docs/device-input-report.md). Saves everything under reports/adb-<time>/.
 # Usage: scripts/adb-checks.sh
 set -uo pipefail
 source "$(dirname "$0")/env.sh"

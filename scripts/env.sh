@@ -69,13 +69,13 @@ fi
 PROBE_ID="dev.titan.probe"
 APP_ID_CODE="dev.titan.code"
 
-# Default module for install/logcat/pull-report: the real app once it exists, else the probe.
+# Default module for install and logcat: the app (the probe is chosen with "probe").
 default_module() { if [ -d "$REPO_ROOT/app" ]; then echo app; else echo probe; fi; }
 
-# Sets APP_ID, LOG_TAG and REPORT_DIR (folder under /sdcard/Download) for a module name, or exits.
+# Sets APP_ID, LOG_TAG and REPORT_DIR (the probe's report folder under /sdcard/Download) for a module name, or exits.
 resolve_module() {
   case "$1" in
-    app)   APP_ID="$APP_ID_CODE"; LOG_TAG="TitanCode";  REPORT_DIR="titan-code-acceptance" ;;
+    app)   APP_ID="$APP_ID_CODE"; LOG_TAG="TitanCode";  REPORT_DIR="" ;;
     probe) APP_ID="$PROBE_ID";    LOG_TAG="TitanProbe"; REPORT_DIR="titan-probe" ;;
     *) echo "Unknown module '$1' (available: app, probe)" >&2; exit 1 ;;
   esac

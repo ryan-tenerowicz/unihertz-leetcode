@@ -1,15 +1,15 @@
 # Running the Key & Gesture Probe
 
-The probe works through every test in PLAN.md §9.3, one per screen. You do the action, watch the live log, and tap **Pass / Fail / Unclear**. The probe records the raw events behind each result.
+The Key & Gesture Probe (`probe/`, `dev.titan.probe`) is the Phase 0 diagnostic app: it records exactly what the keyboard, `sym`, `fn`, the red button and the keyboard surface send. Its guided run works through every test (K01–K16 keys, G01–G13 surface gestures, B01–B03 backlight, L01–L03 lifecycle, C01 Cloudflare), one per screen; the results are summarised in [`device-input-report.md`](device-input-report.md). Re-run it after a Unihertz firmware update. You do the action, watch the live log, and tap **Pass / Fail / Unclear**. The probe records the raw events behind each result.
 
 ## 1. Install
 
 ```bash
 scripts/doctor.sh      # everything ✓?
-scripts/install.sh     # builds, installs, launches "Titan Probe"
+scripts/install.sh probe   # builds, installs, launches "Titan Probe"
 ```
 
-If the build fails, send me `build-logs/latest.log` (or just tell me, since I can read the folder).
+If the build fails, the log is in `build-logs/latest.log`.
 
 ## 2. adb checks (about 2 minutes)
 
