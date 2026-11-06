@@ -4,11 +4,14 @@
 |---|---|---|---|
 | JetBrains Mono NL Regular 2.304 (no-ligatures build) | `app/src/main/res/font/jetbrains_mono_nl_regular.ttf` | https://github.com/JetBrains/JetBrainsMono/releases/tag/v2.304 | SIL Open Font License 1.1 (below) |
 | MagicPython TextMate grammar 1.1.1 (commit `7d0f2b22`), as shipped in VS Code | `app/src/main/assets/textmate/python/MagicPython.tmLanguage.json` | https://github.com/MagicStack/MagicPython via https://github.com/microsoft/vscode/tree/main/extensions/python/syntaxes | MIT (below) |
+| KaTeX 0.16.11 (maths in Codeforces statements and editorials, rev 36): `katex.min.js`, `katex.min.css`, woff2 fonts | `app/src/main/assets/katex/` | https://www.npmjs.com/package/katex/v/0.16.11 | MIT (`katex/LICENSE`); its fonts are under the SIL OFL 1.1 |
+| Jedi 0.19.2 (type-aware completion, rev 38), trimmed: Python 2 and third-party stubs (typeshed `stdlib/2`, `third_party/*`, `django-stubs`) removed | `app/src/main/python/jedi/` | https://pypi.org/project/jedi/0.19.2/ | MIT (`jedi/LICENSE.txt`); its bundled typeshed stubs are Apache 2.0 (`jedi/third_party/typeshed/LICENSE`) |
+| parso 0.8.7 (Python parser for Jedi; has the 3.14 grammar) | `app/src/main/python/parso/` | https://pypi.org/project/parso/0.8.7/ | MIT (`parso/LICENSE.txt`) |
 | sortedcontainers 2.4.0 (pure Python, for the local runner) | `app/src/main/python/sortedcontainers/` | https://pypi.org/project/sortedcontainers/2.4.0/ | Apache 2.0 (`sortedcontainers/LICENSE`) |
 
 Python itself is bundled by Chaquopy (MIT-licensed plugin; CPython under the PSF licence).
 
-Written for this project (no third-party licence): `textmate/titan-dark.json` (theme),
+Written for this project (no third-party licence): `katex/titan-math.js`, `textmate/titan-dark.json` (theme),
 `textmate/languages.json`, `textmate/python/language-configuration.json`.
 
 The editor library (Sora Editor) is a Gradle dependency, not a bundled asset; it's licensed under LGPL-2.1.

@@ -39,6 +39,12 @@
             android:exported="false"
             android:process=":runner" />
 
+        <!-- Type-aware completion with Jedi (PLAN §5.4, rev 38): its own process too. -->
+        <service
+            android:name=".runner.CompletionService"
+            android:exported="false"
+            android:process=":complete" />
+
         <!-- WorkManager's foreground service, declared as data sync for pack downloads (rev 25). -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"

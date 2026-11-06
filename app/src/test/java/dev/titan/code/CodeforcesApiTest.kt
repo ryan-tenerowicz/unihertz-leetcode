@@ -86,8 +86,8 @@ class CodeforcesApiTest {
         // A fresh page: the TeX script after the drawing wins, so the usual TeX conversion applies.
         val page = """<html><body><div class="problem-statement"><div class="header"><div class="title">A. T</div></div><p>Let <span class="MathJax_Preview"></span><span class="MathJax"><nobr>x</nobr></span><script type="math/tex">1 \le n_i \le 10^9</script> and</p><div class="MathJax_Display"><span class="MathJax"><nobr>y</nobr></span></div><script type="math/tex; mode=display">a+b</script></div></body></html>"""
         val html = CodeforcesApi.parseStatement(page, "cf:1A").detail.contentHtml!!
-        assertTrue(html, html.contains("<span class=\"math\">1 ≤ n<sub>i</sub> ≤ 10<sup>9</sup></span>"))
-        assertTrue(html, html.contains("<div class=\"math\">a+b</div>"))
+        assertTrue(html, html.contains("<span class=\"math\" data-tex=\"1 \\le n_i \\le 10^9\">1 ≤ n<sub>i</sub> ≤ 10<sup>9</sup></span>"))
+        assertTrue(html, html.contains("<div class=\"math\" data-tex=\"a+b\">a+b</div>"))
         assertFalse(html, html.contains("MathJax") || html.contains("nobr"))
 
         // MathML structure keeps sub/superscripts and fractions.

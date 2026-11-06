@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<!-- codeforces.com/blog/entry/132373 as the hidden browser sees it: content from api/blogEntry.view
+     (2026-11-04) in the blog page's markup, with the tutorials for 1999A and 1999B filled in by the
+     page's script and the rest still loading. -->
+<html><head><title>Codeforces Round 964 (Div. 4) Editorial - Codeforces</title></head>
+<body>
+<div id="sidebar"><div class="roundbox sidebox"><div class="caption titled">→ Contest materials</div>
+<ul><li><a href="/blog/entry/132165" title="Announcement (en)">Announcement (en)</a></li>
+<li><a href="/blog/entry/132373" title="Tutorial (en)">Tutorial (en)</a></li></ul></div></div>
+<div class="topic"><div class="title"><a href="/blog/entry/132373"><p>Codeforces Round 964 (Div. 4) Editorial</p></a></div>
+<div class="info">By <a href="/profile/flamestorm" class="rated-user user-orange">flamestorm</a>, history, 3 months ago</div>
+<div class="content"><div class="ttypography"><p>Thanks for participating. We hope you enjoyed the contest!</p><p><a href="/contest/1999/problem/A" title="Codeforces Round 964 (Div. 4)">1999A - A+B Again?</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/flamestorm" title="Master flamestorm">flamestorm</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999A"><p>The answer is the sum of the two digits: $$$\lfloor n/10 \rfloor + n \bmod 10$$$.</p></div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code>#include &lt;bits/stdc++.h&gt;
+
+using namespace std;
+
+void solve() {
+	int n;
+	cin &gt;&gt; n;
+	cout &lt;&lt; (n / 10) + (n % 10) &lt;&lt; '\n';	
+}
+
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
+	int tt; cin &gt;&gt; tt; for (int i = 1; i &lt;= tt; i++) {solve();}
+	// solve();
+}
+</code></pre></div></div><p><a href="/contest/1999/problem/B" title="Codeforces Round 964 (Div. 4)">1999B - Card Game</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/SlavicG" title="Master SlavicG">SlavicG</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999B"><p>Try all $$$4$$$ orders of the rounds and count the ones Suneet wins, for each of $$$t \le 10^4$$$ tests.</p></div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code>def f(a, b):
+    if (a &gt; b): return 1
+    if (a == b): return 0
+    if (a &lt; b): return -1
+for _ in range(int(input())):
+    a, b, c, d = map(int, input().split())
+    ans = 0
+    if f(a, c) + f(b, d) &gt; 0:
+        ans += 1
+    if f(a, d) + f(b, c) &gt; 0:
+        ans += 1
+    if f(b, c) + f(a, d) &gt; 0:
+        ans += 1
+    if f(b, d) + f(a, c) &gt; 0:
+        ans += 1
+    print(ans)
+</code></pre></div></div><p><a href="/contest/1999/problem/C" title="Codeforces Round 964 (Div. 4)">1999C - Showering</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/SlavicG" title="Master SlavicG">SlavicG</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999C">Tutorial is loading...</div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code>def solve():
+    n, s, m = map(int, input().split())
+    segs = [[0, 0], [m, m]] + [list(map(int, input().split())) for i in range(n)]
+    segs.sort()
+    for i in range(1, n + 2):
+        if segs[i][0] - segs[i - 1][1] &gt;= s:
+            print('YES')
+            return
+    print('NO')
+
+
+#sys.stdin = open('in', 'r')
+for _ in range(int(input())):
+    solve()
+</code></pre></div></div><p><a href="/contest/1999/problem/D" title="Codeforces Round 964 (Div. 4)">1999D - Slavic's Exam</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/SlavicG" title="Master SlavicG">SlavicG</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999D">Tutorial is loading...</div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code><br />#include &lt;bits/stdc++.h&gt;
+using namespace std;
+
+int main() {
+    int test_cases; cin &gt;&gt; test_cases;
+    while(test_cases--) {
+        string s, t; cin &gt;&gt; s &gt;&gt; t;
+    	int idx = 0;
+    
+    	for(int i = 0; i &lt; (int)s.size(); ++i) {
+    		if(s[i] == '?') {
+    			if(idx &lt; (int)t.size()) s[i] = t[idx++];
+    			else s[i] = 'a';
+    		} else if(s[i] == t[idx]) ++idx;
+    	}
+    	if(idx &gt;= t.size()) cout &lt;&lt; &quot;YES\n&quot; &lt;&lt; s &lt;&lt; &quot;\n&quot;;
+    	else cout &lt;&lt; &quot;NO\n&quot;;
+    }
+}
+</code></pre></div></div><p><a href="/contest/1999/problem/E" title="Codeforces Round 964 (Div. 4)">1999E - Triple Operations</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/flamestorm" title="Master flamestorm">flamestorm</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999E">Tutorial is loading...</div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code><br />#include &lt;bits/stdc++.h&gt;
+
+using namespace std;
+
+const int MAX = 200'007;
+const int MOD = 1'000'000'007;
+
+int a[MAX], psum[MAX];
+
+int f(int x) {
+	int cnt = 0;
+	while (x) {
+		x /= 3;
+		cnt++;
+	}
+	return cnt;
+}
+
+void solve() {
+	int l, r;
+	cin &gt;&gt; l &gt;&gt; r;
+	cout &lt;&lt; psum[r] - psum[l - 1] + a[l] &lt;&lt; '\n';
+}
+
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
+	
+	psum[0] = 0;
+	for (int i = 1; i &lt; MAX - 1; i++) {
+		a[i] = f(i);
+		psum[i] = psum[i - 1] + a[i];
+	}
+	
+	int tt; cin &gt;&gt; tt; for (int i = 1; i &lt;= tt; i++) {solve();}
+	// solve();
+}
+</code></pre></div></div><p><a href="/contest/1999/problem/F" title="Codeforces Round 964 (Div. 4)">1999F - Expected Median</a></p><p>Idea: <a class="rated-user user-violet" href="/profile/mesanu" title="Candidate Master mesanu">mesanu</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999F">Tutorial is loading...</div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code><br />#include &lt;bits/stdc++.h&gt;
+using namespace std;
+
+const int N = 2e5 + 5, mod = 1e9 + 7;
+int64_t fact[N];
+int64_t pw(int64_t a, int64_t b) {
+	int64_t r = 1;
+	while(b &gt; 0) {
+		if(b &amp; 1) r = (r * a) % mod;
+		b /= 2;
+		a = (a * a) % mod; 
+	}
+	return r;
+}
+int64_t C(int64_t n, int64_t k) {
+	if(n &lt; k) return 0LL;
+	return (fact[n] * pw((fact[n - k] * fact[k]) % mod, mod - 2)) % mod;
+}
+int main() {
+	int t; cin &gt;&gt; t;
+	fact[0] = 1;
+	for(int64_t i = 1; i &lt; N; ++i) fact[i] = (fact[i - 1] * i) % mod;
+	while(t--) {
+		int n, k; cin &gt;&gt; n &gt;&gt; k;
+		vector&lt;int&gt; a(n);
+		int ones = 0;
+		for(int i = 0; i &lt; n; ++i) {
+			cin &gt;&gt; a[i];
+			ones += a[i];
+		}
+		//at least k/2+1 ones
+		int64_t ans = 0;
+		for(int cnt_ones = k / 2 + 1; cnt_ones &lt;= min(ones, k); ++cnt_ones) {
+			ans += C(ones, cnt_ones) * C(n - ones, k - cnt_ones) % mod;
+			ans %= mod;
+		}
+		cout &lt;&lt; ans &lt;&lt; &quot;\n&quot;;
+	}
+}
+</code></pre></div></div><p><a href="/contest/1999/problem/G1" title="Codeforces Round 964 (Div. 4)">1999G1 - Ruler (easy version)</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/flamestorm" title="Master flamestorm">flamestorm</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999G1">Tutorial is loading...</div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code><br />#include &lt;bits/stdc++.h&gt;
+ 
+using namespace std;
+ 
+const int MAX = 200'007;
+const int MOD = 1'000'000'007;
+ 
+void solve() {
+	int l = 2, r = 1000;
+	while (l &lt; r) {
+		int mid = l + (r - l) / 2;
+		cout &lt;&lt; &quot;? 1 &quot; &lt;&lt; mid &lt;&lt; endl;
+		int resp; cin &gt;&gt; resp;
+		
+		if (resp == mid) {
+			l = mid + 1;
+		} 
+		else {
+			r = mid;
+		}
+	}
+	cout &lt;&lt; &quot;! &quot; &lt;&lt; l &lt;&lt; endl;	
+}
+ 
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
+	int tt; cin &gt;&gt; tt; for (int i = 1; i &lt;= tt; i++) {solve();}
+	// solve();
+}
+</code></pre></div></div><p><a href="/contest/1999/problem/G2" title="Codeforces Round 964 (Div. 4)">1999G2 - Ruler (hard version)</a></p><p>Idea: <a class="rated-user user-orange" href="/profile/flamestorm" title="Master flamestorm">flamestorm</a></p> <div class="spoiler"><b class="spoiler-title">Tutorial</b><div class="spoiler-content" style="display: none;"><div class="problemTutorial" problemcode="1999G2">Tutorial is loading...</div></div></div> <div class="spoiler"><b class="spoiler-title">Solution</b><div class="spoiler-content" style="display: none;"><pre><code><br />#include &lt;bits/stdc++.h&gt;
+ 
+using namespace std;
+ 
+const int MAX = 200'007;
+const int MOD = 1'000'000'007;
+ 
+void solve() {
+	int l = 1, r = 999;
+	while (r - l &gt; 2) {
+		int a = (2 * l + r) / 3;
+		int b = (2 * r + l) / 3;
+		cout &lt;&lt; &quot;? &quot; &lt;&lt; a &lt;&lt; ' ' &lt;&lt; b &lt;&lt; endl;
+		int resp; cin &gt;&gt; resp;
+		
+		if (resp == (a + 1) * (b + 1)) {
+			r = a;
+		}
+		else if (resp == a * b) {
+			l = b;
+		}
+		else {
+			l = a; r = b;
+		}
+	}
+	if (r - l == 2) {
+		cout &lt;&lt; &quot;? 1 &quot; &lt;&lt; l + 1 &lt;&lt; endl;
+		int resp; cin &gt;&gt; resp;
+		
+		if (resp == l + 1) {l = l + 1;}
+		else {r = l + 1;}
+		
+	}
+	cout &lt;&lt; &quot;! &quot; &lt;&lt; r &lt;&lt; endl;
+}
+ 
+int main() {
+	ios::sync_with_stdio(false);
+	cin.tie(nullptr);
+	int tt; cin &gt;&gt; tt; for (int i = 1; i &lt;= tt; i++) {solve();}
+	// solve();
+}
+</code></pre></div></div></div></div></div>
+<script>var x = 1;</script>
+</body></html>

@@ -69,6 +69,32 @@ class LocalJudgeTest {
         assertEquals("Memory Limit Exceeded: killed", none.cases[0].error)
     }
 
+    /** Rev 31: a Codeforces problem runs under its own time and memory limits. */
+    @Test fun codeforcesLimits() {
+        val cf = dev.titan.code.data.codeforces.CodeforcesApi.parseStatement(
+            javaClass.getResource("/codeforces/4A.html")!!.readText(), "cf:4A").detail
+        assertEquals(1000L, LocalJudge.caseLimitMs(cf))
+        assertEquals(64, LocalJudge.memLimitMb(cf))
+        val req = org.json.JSONObject(LocalJudge.request("print(1)", cf, listOf("8\n"), listOf("YES")))
+        assertEquals(1000L, req.getLong("caseLimitMs"))
+        assertEquals(64, req.getInt("memLimitMb"))
+        assertEquals(15_000L, LocalJudge.overallLimitMs(10, 1000L))
+
+        fun with(time: String, memory: String) = cf.copy(metaData = org.json.JSONObject(cf.metaData)
+            .put("timeLimit", time).put("memoryLimit", memory).toString())
+        assertEquals(2500L, LocalJudge.caseLimitMs(with("2.5 seconds", "256 megabytes")))
+        assertEquals(256, LocalJudge.memLimitMb(with("2.5 seconds", "256 megabytes")))
+        // Unreadable or missing: the defaults.
+        assertEquals(LocalJudge.CASE_LIMIT_MS, LocalJudge.caseLimitMs(with("", "")))
+        assertEquals(null, LocalJudge.memLimitMb(with("", "")))
+        assertEquals(LocalJudge.CASE_LIMIT_MS, LocalJudge.caseLimitMs(cf.copy(metaData = "")))
+
+        // LeetCode keeps the fixed limit and the harness's memory default.
+        assertEquals(LocalJudge.CASE_LIMIT_MS, LocalJudge.caseLimitMs(detail))
+        assertEquals(null, LocalJudge.memLimitMb(detail))
+        assertFalse(org.json.JSONObject(LocalJudge.request("", detail, emptyList(), emptyList())).has("memLimitMb"))
+    }
+
     /** Rev 24: the constraint text the stress generator reads, and its result. */
     @Test fun stressRequestAndResult() {
         val text = LocalJudge.constraintsText(detail.contentHtml)

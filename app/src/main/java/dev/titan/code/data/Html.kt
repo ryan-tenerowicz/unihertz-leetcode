@@ -138,7 +138,8 @@ object Markdown {
         return out.toString()
     }
 
-    private fun codeBlock(code: String, lang: String, fold: Fold): String {
+    /** A code block, foldable past [PEEK_LINES] lines; also used for Codeforces editorials (rev 32). */
+    fun codeBlock(code: String, lang: String, fold: Fold): String {
         val lines = code.split('\n')
         val label = if (lang.isEmpty()) "" else "<span class=\"lang\">${HtmlClean.escape(lang)}</span>"
         if (fold == Fold.NONE || lines.size <= PEEK_LINES) {

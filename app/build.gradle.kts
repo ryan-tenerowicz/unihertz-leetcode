@@ -85,6 +85,8 @@ chaquopy {
         pyc {
             src = false
         }
+        // Jedi reads its own stub files and parso its grammars from disk (rev 38).
+        extractPackages("jedi", "parso", "sortedcontainers")
     }
 }
 

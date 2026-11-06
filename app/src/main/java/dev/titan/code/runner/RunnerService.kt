@@ -12,7 +12,6 @@ import android.os.Messenger
 import android.os.Process
 import android.util.Log
 import com.chaquo.python.Python
-import com.chaquo.python.android.AndroidPlatform
 
 /**
  * The local runner (PLAN §7), in its own process (`android:process=":runner"`), so a hang or a
@@ -39,7 +38,7 @@ class RunnerService : Service() {
         })
         handler.post {
             val t = System.currentTimeMillis()
-            if (!Python.isStarted()) Python.start(AndroidPlatform(this))
+            PythonStart.ensure(this)
             Python.getInstance().getModule("titan_runner")
             Log.d(TAG, "python ready in ${System.currentTimeMillis() - t} ms (pid ${Process.myPid()})")
         }

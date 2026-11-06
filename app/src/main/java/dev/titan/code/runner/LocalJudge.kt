@@ -28,8 +28,32 @@ object LocalJudge {
     /** Per-case time limit on the phone (rev 24); the harness stops a case that runs longer. */
     const val CASE_LIMIT_MS = 3000L
 
+    /**
+     * The per-case time limit for [d] (rev 31): a Codeforces problem's own "time limit per test"
+     * ("1 second", "2.5 seconds"), saved in its `metaData`; [CASE_LIMIT_MS] otherwise or when it
+     * can't be read.
+     */
+    fun caseLimitMs(d: ProblemDetail): Long =
+        codeforcesLimit(d, "timeLimit", Regex("""(\d+(?:\.\d+)?)\s*seconds?"""))
+            ?.let { (it * 1000).toLong().coerceIn(100L, 30_000L) } ?: CASE_LIMIT_MS
+
+    /**
+     * The per-case memory limit in MB for [d] (rev 31): a Codeforces problem's "memory limit per
+     * test" ("256 megabytes"); null to keep the harness default (512 MB of growth).
+     */
+    fun memLimitMb(d: ProblemDetail): Int? =
+        codeforcesLimit(d, "memoryLimit", Regex("""(\d+(?:\.\d+)?)\s*megabytes?"""))
+            ?.let { it.toInt().coerceIn(16, 2048) }
+
+    private fun codeforcesLimit(d: ProblemDetail, key: String, pattern: Regex): Double? {
+        if (d.platform != dev.titan.code.data.Platform.CODEFORCES) return null
+        val text = runCatching { JSONObject(d.metaData).optString(key) }.getOrNull() ?: return null
+        return pattern.find(text.lowercase())?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 }
+    }
+
     /** How long the app waits for a whole run before killing the runner: every case at its limit, plus slack. */
-    fun overallLimitMs(cases: Int): Long = (CASE_LIMIT_MS * cases + 5000L).coerceIn(10_000L, 120_000L)
+    fun overallLimitMs(cases: Int, caseLimitMs: Long = CASE_LIMIT_MS): Long =
+        (caseLimitMs * cases + 5000L).coerceIn(10_000L, 120_000L)
 
     fun request(code: String, d: ProblemDetail, inputs: List<String>, expected: List<String?>, progressPath: String? = null): String =
         JSONObject()
@@ -41,7 +65,8 @@ object LocalJudge {
             // Picks the harness driver for problems with special types (titan_drivers.py, rev 23).
             // NeetCode's frontendId is the LeetCode number of the same problem.
             .put("number", if (d.platform == dev.titan.code.data.Platform.CODEFORCES) 0 else d.frontendId)
-            .put("caseLimitMs", CASE_LIMIT_MS)
+            .put("caseLimitMs", caseLimitMs(d))
+            .apply { memLimitMb(d)?.let { put("memLimitMb", it) } }
             .apply { if (progressPath != null) put("progressPath", progressPath) }
             .toString()
 

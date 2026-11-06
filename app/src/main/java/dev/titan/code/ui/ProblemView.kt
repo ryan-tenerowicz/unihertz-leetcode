@@ -7,8 +7,10 @@ import android.webkit.WebView
 import dev.titan.code.samples.Sample
 
 /**
- * The Problem pane's statement, and the Comments pane (PLAN §4.1): a WebView with bundled dark CSS, no JavaScript, no
- * network and no focus, so hardware keys never reach it. The keyboard surface scrolls it 1:1
+ * The Problem pane's statement, and the Comments pane (PLAN §4.1): a WebView with bundled dark CSS, no
+ * network and no focus, so hardware keys never reach it. JavaScript is on only for the app's own
+ * bundled scripts (KaTeX for maths, rev 36): the page's content-security policy allows scripts from
+ * `file:` only, with no inline scripts or handlers, and the sites' HTML has its scripts removed anyway. The keyboard surface scrolls it 1:1
  * through [scrollByClamped] (PLAN §5.6); the touchscreen scrolls it as usual.
  */
 @SuppressLint("ViewConstructor")
@@ -19,7 +21,10 @@ class ProblemView(context: Context) : WebView(context) {
         isFocusable = false
         isFocusableInTouchMode = false
         isVerticalScrollBarEnabled = true
-        settings.javaScriptEnabled = false
+        settings.javaScriptEnabled = true
+        settings.javaScriptCanOpenWindowsAutomatically = false
+        settings.allowFileAccessFromFileURLs = false
+        settings.allowUniversalAccessFromFileURLs = false
         settings.blockNetworkLoads = true
         // Statement images are saved under filesDir and shown from file:// URLs (PLAN §8.2).
         settings.allowFileAccess = true
@@ -52,14 +57,25 @@ class ProblemView(context: Context) : WebView(context) {
         if (html == shownHtml) return false
         pendingScroll = if (keepScroll) scrollY else 0
         shownHtml = html
+        // Rev 36: KaTeX only where there are formulas (titan-math.js draws each `data-tex`).
+        val maths = html.contains("data-tex=")
         val page = """<!doctype html><html><head><meta charset="utf-8">
+            <meta http-equiv="Content-Security-Policy" content="$CSP">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link rel="stylesheet" href="problem.css"></head><body>$html</body></html>"""
+            ${if (maths) "<link rel=\"stylesheet\" href=\"../katex/katex.min.css\">" else ""}
+            <link rel="stylesheet" href="problem.css"></head><body>$html
+            ${if (maths) "<script src=\"../katex/katex.min.js\"></script><script src=\"../katex/titan-math.js\"></script>" else ""}
+            </body></html>"""
         loadDataWithBaseURL("file:///android_asset/samples/", page, "text/html", "utf-8", null)
         return true
     }
 
     fun show(sample: Sample) = show(sample.statementHtml)
+
+    companion object {
+        /** Bundled files only: no inline script, no network. KaTeX sets inline styles, hence `style-src 'unsafe-inline'`. */
+        const val CSP = "default-src 'none'; script-src file:; style-src file: 'unsafe-inline'; font-src file:; img-src file: data:"
+    }
 
     /** Scroll by [dy] view pixels, kept within the content. */
     fun scrollByClamped(dy: Int) {

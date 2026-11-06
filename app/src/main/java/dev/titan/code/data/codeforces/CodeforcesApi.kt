@@ -99,6 +99,9 @@ object CodeforcesApi {
             .put("contestId", contestId)
             .put("index", index)
             .put("outputs", JSONArray(samples.map { it.second }))
+            .put("parser", PARSER)
+            // Rev 32: the contest's tutorial blog entries, from the page's "Contest materials".
+            .put("editorials", JSONArray(CodeforcesEditorial.tutorialIds(html)))
         val body = buildString {
             append("<div class=\"meta\">⏱ ${HtmlClean.escape(time)} · ▦ ${HtmlClean.escape(memory)}</div>")
             append(tex(st.html()))
@@ -140,6 +143,19 @@ object CodeforcesApi {
     /** Sample inputs saved with a statement. */
     fun sampleInputs(exampleTestcases: String): List<String> =
         runCatching { JSONArray(exampleTestcases).let { a -> (0 until a.length()).map { a.getString(it) } } }.getOrDefault(emptyList())
+
+    /** Rev 36: statements keep each formula's TeX (`data-tex`) for KaTeX. */
+    const val PARSER = 2
+
+    /** A saved statement from before [PARSER] 2 that has maths, and so lost its TeX. */
+    fun needsReparse(metaData: String, contentHtml: String?): Boolean {
+        val parser = runCatching { JSONObject(metaData).optInt("parser") }.getOrDefault(0)
+        return parser < PARSER && contentHtml != null && contentHtml.contains("class=\"math\"")
+    }
+
+    /** Tutorial blog ids saved with a statement (rev 32); null for statements saved before. */
+    fun editorialIds(metaData: String): List<Long>? =
+        runCatching { JSONObject(metaData).optJSONArray("editorials")?.let { a -> (0 until a.length()).map { a.getLong(it) } } }.getOrNull()
 
     fun sampleOutputs(metaData: String): List<String> =
         runCatching { JSONObject(metaData).getJSONArray("outputs").let { a -> (0 until a.length()).map { a.getString(it) } } }.getOrDefault(emptyList())
@@ -212,45 +228,123 @@ object CodeforcesApi {
 
     // ---- TeX ($$$…$$$) to plain HTML ----------------------------------------------------------
 
+    /**
+     * TeX commands as text, for when KaTeX can't draw a formula (rev 36: the text is only the
+     * fallback; `titan-math.js` draws the `data-tex` source). Commands ending in a letter only
+     * match before a non-letter, so `\le` never eats `\left`.
+     */
     private val symbols = linkedMapOf(
-        "\\leq" to "≤", "\\le" to "≤", "\\geq" to "≥", "\\ge" to "≥", "\\neq" to "≠", "\\ne" to "≠",
-        "\\cdot" to "·", "\\times" to "×", "\\ldots" to "…", "\\cdots" to "⋯", "\\dots" to "…",
-        "\\lfloor" to "⌊", "\\rfloor" to "⌋", "\\lceil" to "⌈", "\\rceil" to "⌉", "\\oplus" to "⊕",
-        "\\rightarrow" to "→", "\\to" to "→", "\\leftarrow" to "←", "\\infty" to "∞", "\\sum" to "Σ", "\\prod" to "Π",
-        "\\pm" to "±", "\\notin" to "∉", "\\in" to "∈", "\\subseteq" to "⊆", "\\subset" to "⊂", "\\cup" to "∪", "\\cap" to "∩",
-        "\\land" to "∧", "\\lor" to "∨", "\\neg" to "¬", "\\forall" to "∀", "\\exists" to "∃", "\\mid" to "|",
-        "\\alpha" to "α", "\\beta" to "β", "\\gamma" to "γ", "\\delta" to "δ", "\\epsilon" to "ε", "\\lambda" to "λ",
-        "\\mu" to "μ", "\\pi" to "π", "\\sigma" to "σ", "\\phi" to "φ", "\\omega" to "ω", "\\Delta" to "Δ",
-        "\\bmod" to " mod ", "\\mod" to " mod ", "\\gcd" to "gcd", "\\max" to "max", "\\min" to "min", "\\log" to "log",
-        "\\lbrace" to "{", "\\rbrace" to "}", "\\{" to "{", "\\}" to "}", "\\%" to "%", "\\#" to "#", "\\&" to "&amp;",
-        "\\quad" to " ", "\\qquad" to "  ", "\\," to " ", "\\;" to " ", "\\!" to "", "\\ " to " ", "\\left" to "", "\\right" to "",
+        // relations
+        "\\leq" to "≤", "\\le" to "≤", "\\leqslant" to "≤", "\\geq" to "≥", "\\ge" to "≥", "\\geqslant" to "≥",
+        "\\neq" to "≠", "\\ne" to "≠", "\\gt" to "&gt;", "\\lt" to "&lt;", "\\ll" to "≪", "\\gg" to "≫",
+        "\\approx" to "≈", "\\equiv" to "≡", "\\sim" to "∼", "\\simeq" to "≃", "\\cong" to "≅", "\\propto" to "∝",
+        "\\prec" to "≺", "\\succ" to "≻", "\\preceq" to "⪯", "\\succeq" to "⪰", "\\perp" to "⊥", "\\parallel" to "∥",
+        "\\mid" to "|", "\\nmid" to "∤", "\\divides" to "|",
+        // sets and logic
+        "\\in" to "∈", "\\notin" to "∉", "\\ni" to "∋", "\\subseteq" to "⊆", "\\subset" to "⊂", "\\supseteq" to "⊇", "\\supset" to "⊃",
+        "\\cup" to "∪", "\\cap" to "∩", "\\bigcup" to "⋃", "\\bigcap" to "⋂", "\\setminus" to "∖", "\\emptyset" to "∅", "\\varnothing" to "∅",
+        "\\land" to "∧", "\\wedge" to "∧", "\\lor" to "∨", "\\vee" to "∨", "\\neg" to "¬", "\\lnot" to "¬",
+        "\\forall" to "∀", "\\exists" to "∃", "\\nexists" to "∄",
+        // arrows
+        "\\rightarrow" to "→", "\\to" to "→", "\\leftarrow" to "←", "\\gets" to "←", "\\leftrightarrow" to "↔",
+        "\\Rightarrow" to "⇒", "\\implies" to "⇒", "\\Leftarrow" to "⇐", "\\Leftrightarrow" to "⇔", "\\iff" to "⇔",
+        "\\longrightarrow" to "⟶", "\\longleftarrow" to "⟵", "\\mapsto" to "↦", "\\uparrow" to "↑", "\\downarrow" to "↓",
+        // operators
+        "\\cdot" to "·", "\\times" to "×", "\\div" to "÷", "\\pm" to "±", "\\mp" to "∓", "\\ast" to "∗", "\\star" to "⋆",
+        "\\circ" to "∘", "\\bullet" to "•", "\\oplus" to "⊕", "\\bigoplus" to "⊕", "\\otimes" to "⊗", "\\odot" to "⊙",
+        "\\sum" to "Σ", "\\prod" to "Π", "\\int" to "∫", "\\partial" to "∂", "\\nabla" to "∇", "\\infty" to "∞",
+        "\\bmod" to " mod ", "\\mod" to " mod ", "\\oplus" to "⊕", "\\angle" to "∠", "\\triangle" to "△", "\\prime" to "′",
+        // named functions
+        "\\gcd" to "gcd", "\\lcm" to "lcm", "\\max" to "max", "\\min" to "min", "\\log" to "log", "\\ln" to "ln", "\\lg" to "lg",
+        "\\exp" to "exp", "\\sin" to "sin", "\\cos" to "cos", "\\tan" to "tan", "\\arg" to "arg", "\\deg" to "deg",
+        "\\det" to "det", "\\dim" to "dim", "\\sup" to "sup", "\\inf" to "inf", "\\lim" to "lim", "\\limsup" to "lim sup", "\\liminf" to "lim inf",
+        // dots
+        "\\ldots" to "…", "\\cdots" to "⋯", "\\dots" to "…", "\\dotsc" to "…", "\\dotsb" to "⋯", "\\vdots" to "⋮", "\\ddots" to "⋱",
+        // delimiters
+        "\\lfloor" to "⌊", "\\rfloor" to "⌋", "\\lceil" to "⌈", "\\rceil" to "⌉", "\\langle" to "⟨", "\\rangle" to "⟩",
+        "\\lvert" to "|", "\\rvert" to "|", "\\vert" to "|", "\\lVert" to "‖", "\\rVert" to "‖", "\\Vert" to "‖", "\\|" to "‖",
+        "\\lbrace" to "{", "\\rbrace" to "}", "\\lbrack" to "[", "\\rbrack" to "]", "\\backslash" to "\\",
+        // Greek
+        "\\alpha" to "α", "\\beta" to "β", "\\gamma" to "γ", "\\delta" to "δ", "\\epsilon" to "ε", "\\varepsilon" to "ε",
+        "\\zeta" to "ζ", "\\eta" to "η", "\\theta" to "θ", "\\vartheta" to "ϑ", "\\iota" to "ι", "\\kappa" to "κ",
+        "\\lambda" to "λ", "\\mu" to "μ", "\\nu" to "ν", "\\xi" to "ξ", "\\pi" to "π", "\\rho" to "ρ", "\\sigma" to "σ",
+        "\\tau" to "τ", "\\upsilon" to "υ", "\\phi" to "φ", "\\varphi" to "φ", "\\chi" to "χ", "\\psi" to "ψ", "\\omega" to "ω",
+        "\\Gamma" to "Γ", "\\Delta" to "Δ", "\\Theta" to "Θ", "\\Lambda" to "Λ", "\\Xi" to "Ξ", "\\Pi" to "Π",
+        "\\Sigma" to "Σ", "\\Phi" to "Φ", "\\Psi" to "Ψ", "\\Omega" to "Ω",
+        // escapes and spacing (braces are protected separately)
+        "\\%" to "%", "\\#" to "#", "\\&" to "&amp;", "\\$" to "$", "\\_" to "_",
+        "\\quad" to " ", "\\qquad" to "  ", "\\," to " ", "\\:" to " ", "\\;" to " ", "\\!" to "", "\\ " to " ",
     )
 
-    /** Replace `$$$…$$$` (inline) and `$$$$$$…$$$$$$` (display) maths with readable text; the page has JavaScript off. */
-    fun tex(html: String): String {
-        val display = Regex("\\$\\$\\$\\$\\$\\$(.+?)\\$\\$\\$\\$\\$\\$", RegexOption.DOT_MATCHES_ALL)
-        val inline = Regex("\\$\\$\\$(.+?)\\$\\$\\$", RegexOption.DOT_MATCHES_ALL)
-        return inline.replace(display.replace(html) { "<div class=\"math\">${texBody(it.groupValues[1])}</div>" }) {
-            "<span class=\"math\">${texBody(it.groupValues[1])}</span>"
-        }
+    // Rev 33: Android's regex engine is ICU, where `{` inside `[...]` starts a string (`[^{}]` is a
+    // syntax error that the desktop JVM accepts), so every brace here is escaped. RegexCompatTest
+    // checks the sources for this. Compiled once.
+    private val texDisplay = Regex("\\$\\$\\$\\$\\$\\$(.+?)\\$\\$\\$\\$\\$\\$", RegexOption.DOT_MATCHES_ALL)
+    private val texInline = Regex("\\$\\$\\$(.+?)\\$\\$\\$", RegexOption.DOT_MATCHES_ALL)
+    private const val ARG = "\\{([^\\{\\}]*)\\}"
+    private val texKeep = Regex("\\\\(?:text|textbf|textit|textrm|textsf|mathrm|mathit|mathbf|mathsf|mathtt|mathcal|mathbb|mathfrak|mathscr|boldsymbol|operatorname\\*?|texttt|emph|bf|it|rm|underline|hat|widehat|tilde|widetilde|vec|dot|ddot|check|breve|acute|grave|mathring|boxed|mbox|hbox)\\s*$ARG")
+    private val texFrac = Regex("\\\\[dt]?frac\\s*$ARG\\s*$ARG")
+    private val texBinom = Regex("\\\\[dt]?binom\\s*$ARG\\s*$ARG")
+    private val texSqrt = Regex("\\\\sqrt\\s*(?:\\[([^\\]]*)\\])?\\s*$ARG")
+    private val texBar = Regex("\\\\(?:overline|bar)\\s*$ARG")
+    private val texPmod = Regex("\\\\pmod\\s*$ARG")
+    private val texDrop = Regex("\\\\(?:hspace|vspace|phantom|hphantom|vphantom|label|tag)\\*?\\s*$ARG")
+    private val texEnv = Regex("\\\\(?:begin|end)\\s*\\{[a-zA-Z*]*\\}")
+    /** Sizing and style commands with nothing to show (`\bigl(` is just a bigger "("). */
+    private val texInvisible = Regex("\\\\(?:[bB]igg?[lrm]?|middle|left|right|displaystyle|textstyle|scriptstyle|scriptscriptstyle|limits|nolimits|nonumber|notag|mathop|mathbin|mathrel|mathord|mathopen|mathclose|mathpunct|stackrel)(?![a-zA-Z])")
+    private val texSupGroup = Regex("\\^\\s*$ARG")
+    private val texSup = Regex("\\^\\s*(\\\\?\\w|['*])")
+    private val texSubGroup = Regex("_\\s*$ARG")
+    private val texSub = Regex("_\\s*(\\\\?\\w)")
+    private val texCommand = Regex("\\\\([a-zA-Z]+)")
+    private val multiSpace = Regex(" {2,}")
+    // `\le` must not match inside `\left`; `\ ` and `\,` end in punctuation and need no such guard (rev 35).
+    private val texSymbols by lazy {
+        symbols.entries.sortedByDescending { it.key.length }
+            .map { (k, v) -> Regex(Regex.escape(k) + if (k.last().isLetter()) "(?![a-zA-Z])" else "") to Regex.escapeReplacement(v) }
     }
 
+    /**
+     * Replace `$$$…$$$` (inline) and `$$$$$$…$$$$$$` (display) maths with `<span class="math"
+     * data-tex="…">text</span>` (a `<div>` for display): rev 36 keeps the TeX for KaTeX to draw
+     * when the page is shown, and the text is what shows if it can't. A formula that can't be
+     * converted shows its TeX (rev 33), never failing the page.
+     */
+    fun tex(html: String): String {
+        fun body(src: String) = runCatching { texBody(src) }.getOrElse { src.replace("<", "&lt;") }
+        // The source is already HTML text (`&lt;`); only quotes and stray tags need escaping for the attribute.
+        fun attr(src: String) = src.replace("\"", "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+        return texInline.replace(texDisplay.replace(html) {
+            "<div class=\"math\" data-tex=\"${attr(it.groupValues[1])}\">${body(it.groupValues[1])}</div>"
+        }) { "<span class=\"math\" data-tex=\"${attr(it.groupValues[1])}\">${body(it.groupValues[1])}</span>" }
+    }
+
+    /** A formula's TeX as readable HTML text: the fallback when KaTeX can't draw it. */
     fun texBody(src: String): String {
-        var s = src
-        // Commands with a braced argument whose content is kept.
-        repeat(3) {
-            s = Regex("\\\\(?:text|textbf|textit|mathrm|mathit|mathbf|mathtt|operatorname|texttt|bf|it|rm|mathcal|mathbb)\\{([^{}]*)}").replace(s) { it.groupValues[1] }
-            s = Regex("\\\\frac\\{([^{}]*)}\\{([^{}]*)}").replace(s) { "(${it.groupValues[1]})/(${it.groupValues[2]})" }
-            s = Regex("\\\\sqrt\\{([^{}]*)}").replace(s) { "√(${it.groupValues[1]})" }
-            s = Regex("\\\\(?:overline|bar)\\{([^{}]*)}").replace(s) { "${it.groupValues[1]}̅" }
+        // Escaped braces and line breaks survive the brace removal at the end.
+        var s = src.replace("\\\\", " ").replace("\\{", "\u0001").replace("\\}", "\u0002").replace("\\&amp;", "\u0003")
+        s = texEnv.replace(s, " ")
+        s = texInvisible.replace(s, "")
+        // Commands with braced arguments, innermost first.
+        repeat(4) {
+            s = texDrop.replace(s, "")
+            s = texKeep.replace(s) { it.groupValues[1] }
+            s = texFrac.replace(s) { "(${it.groupValues[1]})/(${it.groupValues[2]})" }
+            s = texBinom.replace(s) { "C(${it.groupValues[1]}, ${it.groupValues[2]})" }
+            s = texSqrt.replace(s) { (if (it.groupValues[1].isNotEmpty()) "<sup>${it.groupValues[1]}</sup>" else "") + "√(${it.groupValues[2]})" }
+            s = texBar.replace(s) { "${it.groupValues[1]}̅" }
+            s = texPmod.replace(s) { " (mod ${it.groupValues[1]})" }
         }
-        for ((k, v) in symbols) s = s.replace(Regex(Regex.escape(k) + "(?![a-zA-Z])"), Regex.escapeReplacement(v))
-        s = Regex("\\^\\{([^{}]*)}").replace(s) { "<sup>${it.groupValues[1]}</sup>" }
-        s = Regex("\\^(\\\\?\\w)").replace(s) { "<sup>${it.groupValues[1]}</sup>" }
-        s = Regex("_\\{([^{}]*)}").replace(s) { "<sub>${it.groupValues[1]}</sub>" }
-        s = Regex("_(\\w)").replace(s) { "<sub>${it.groupValues[1]}</sub>" }
-        s = Regex("\\\\([a-zA-Z]+)").replace(s) { it.groupValues[1] }
-        return s.replace("{", "").replace("}", "")
+        for ((k, v) in texSymbols) s = s.replace(k, v)
+        repeat(2) {
+            s = texSupGroup.replace(s) { "<sup>${it.groupValues[1]}</sup>" }
+            s = texSubGroup.replace(s) { "<sub>${it.groupValues[1]}</sub>" }
+        }
+        s = texSup.replace(s) { "<sup>${it.groupValues[1]}</sup>" }
+        s = texSub.replace(s) { "<sub>${it.groupValues[1]}</sub>" }
+        s = texCommand.replace(s) { it.groupValues[1] }
+        s = s.replace("{", "").replace("}", "").replace("~", " ").replace("&amp;", " ")
+        return s.replace("\u0001", "{").replace("\u0002", "}").replace("\u0003", "&amp;").replace(multiSpace, " ").trim()
     }
 
     // ---- verdicts ---------------------------------------------------------------------------

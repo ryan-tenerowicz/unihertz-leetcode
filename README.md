@@ -10,7 +10,7 @@ Browse, read, write, run and submit **LeetCode**, **NeetCode** and **Codeforces*
 - **A keyboard-first Python editor.**
   - Every symbol is reachable: Alt, Alt+Shift, and an `fn` palette for `= [ ] { } < > | ; ~`.
   - `sym` + letter commands.
-  - Auto-pairing, smart Enter and Backspace, word completion, indent guides and bracket highlighting.
+  - Auto-pairing, smart Enter and Backspace, type-aware completion (Jedi: `nums.` lists the list methods), indent guides and bracket highlighting.
   - Soft wrap and a saved font size.
   - Drafts autosave with a version history.
 - **The keyboard surface as a trackpad.** Swipe to move the cursor, Shift + swipe to select, with adjustable speed and a vibration per step.
@@ -19,9 +19,10 @@ Browse, read, write, run and submit **LeetCode**, **NeetCode** and **Codeforces*
   - Per-case time, memory and output limits that show the line a stuck case was on.
   - Checkers for problems with several right answers.
   - **⚡ stress tests** against a reference solution on generated inputs.
+- **Codeforces editorials** in the Comments tab: the contest tutorial's part for the open problem.
 - **Run and submit on the site** when online: LeetCode, NeetCode, and Codeforces submissions.
 - **Read offline.**
-  - Statements, discussions and solution posts are saved as you open them.
+  - Statements, discussions, solution posts and Codeforces editorials are saved as you open them.
   - Packs save study plans and lists, or **everything** on a site, in the background.
 - **Comfortable reading.** A separate text size for the Problem and Comments panes scales their text and controls together.
 - **Practice timer** per problem.

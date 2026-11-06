@@ -88,6 +88,7 @@ import dev.titan.code.data.db.DraftVersionRow
 import dev.titan.code.data.leetcode.LeetCodeApi
 import dev.titan.code.editor.Clip
 import dev.titan.code.editor.Completer
+import dev.titan.code.editor.CompletionSite
 import dev.titan.code.ui.CompletionStrip
 import dev.titan.code.editor.EditorActions
 import dev.titan.code.editor.TitanEditor
@@ -203,6 +204,7 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     // M3: Run and Submit on LeetCode (PLAN §6.2), shown in the Results pane.
     private lateinit var webFetch: WebFetch
     private lateinit var runner: dev.titan.code.runner.RunnerClient
+    private lateinit var completer: dev.titan.code.runner.CompletionClient
     private lateinit var resultsScroller: SurfaceScroller
     private val resultsScroll = ScrollState(0)
     /** The last outcome per problem, for this session. */
@@ -278,6 +280,8 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         watchPackWork()
         // Bind the local runner now so Python is warm before the first run (PLAN §7).
         runner = dev.titan.code.runner.RunnerClient(this).also { it.bind() }
+        // And the completer (rev 38): Jedi loads and warms up in its own process.
+        completer = dev.titan.code.runner.CompletionClient(this).also { it.bind() }
         val ua = WebSettings.getDefaultUserAgent(this)
         val http = LeetCodeHttp(auth::cookies, ua).also { it.browser = webFetch }
         nc = NeetCodeHttp(auth, ua)
@@ -313,7 +317,7 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         editor.subscribeEvent(SelectionChangeEvent::class.java) { _, _ ->
             updatePosition()
             // Moving away from the word closes the suggestions.
-            if (completions.isNotEmpty() && editor.actions.wordPrefix() != completionPrefix) completions = emptyList()
+            if (completions.isNotEmpty() && editor.actions.completionSite()?.anchor != completionSite?.anchor) closeCompletions()
         }
         editor.subscribeAlways<ContentChangeEvent> { e ->
             if (e.action != ContentChangeEvent.ACTION_SET_NEW_TEXT && !loading) onBufferChanged()
@@ -324,7 +328,12 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         commentsScroller = SurfaceScroller({ commentsView.scrollByClamped(it) })
         listScroller = SurfaceScroller(::onListSwipe)
         resultsScroller = SurfaceScroller({ dy -> lifecycleScope.launch { resultsScroll.scrollBy(dy.toFloat()) } })
-        commentsView.onAppLink = { if (it == Pages.MORE_LINK) loadMoreComments() }
+        commentsView.onAppLink = {
+            when {
+                it == Pages.MORE_LINK -> loadMoreComments()
+                it.startsWith(Pages.OPEN_LINK) -> it.removePrefix(Pages.OPEN_LINK).takeIf { u -> u.startsWith(CodeforcesApi.ORIGIN) }?.let(::openUrl)
+            }
+        }
         // The practice timer's tick (rev 24): the status line each second, the database every 30 s.
         lifecycleScope.launch {
             while (true) {
@@ -672,24 +681,26 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
 
     private fun loadDiscussion(slug: String, force: Boolean) {
         discussionJob?.cancel()
-        if (Platform.of(slug) == Platform.CODEFORCES) {
-            discussion = null
-            discussionStatus = "Codeforces problems have no comments or solutions here. Each contest's editorial is on codeforces.com."
-            renderComments()
-            return
-        }
+        // Rev 32: Codeforces shows the contest editorial's part for this problem.
+        val cf = Platform.of(slug) == Platform.CODEFORCES
         discussionJob = lifecycleScope.launch {
             if (!force) {
                 discussion = repo.savedDiscussion(slug)
                 renderComments()
                 if (discussion != null) return@launch
             }
+            if (cf && pane != Pane.COMMENTS) {
+                // The editorial loads in the hidden browser Submit also uses: only when it's wanted.
+                discussionStatus = null
+                return@launch
+            }
             if (!online) {
-                discussionStatus = if (discussion == null) "Offline: no discussion saved for this problem yet" else null
+                discussionStatus = if (discussion != null) null
+                    else if (cf) "Offline: no editorial saved for this problem yet" else "Offline: no discussion saved for this problem yet"
                 renderComments()
                 return@launch
             }
-            discussionStatus = "Downloading discussion and solutions…"
+            discussionStatus = if (cf) "Loading the contest's editorial from codeforces.com… (about 10 s)" else "Downloading discussion and solutions…"
             renderComments()
             try {
                 discussion = repo.fetchDiscussion(slug)
@@ -705,6 +716,12 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     /** The WebView shows the Discussion tab or an opened solution post; the solution list is native. */
     private fun renderComments(keepScroll: Boolean = false) {
         val p = problem ?: return
+        // Owner, rev 35: a Codeforces problem has exactly one entry (its editorial), so it opens
+        // straight away instead of a one-row list.
+        if (singleEntry(p) && openSolution == null && commentsTab == CommentsTab.SOLUTIONS && solutions.size == 1) {
+            openSolutionPost(solutions.single())
+            return
+        }
         val s = openSolution
         when {
             commentsTab == CommentsTab.DISCUSSION -> commentsView.show(Pages.discussion(p.label, discussion, discussionStatus))
@@ -713,6 +730,9 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     }
 
     private val solutions get() = discussion?.solutions.orEmpty()
+
+    /** Rev 35: sites whose Comments pane holds one entry, shown without the list. */
+    private fun singleEntry(p: ProblemDetail) = p.platform == Platform.CODEFORCES
 
     private fun moveSolution(delta: Int) {
         solutionHighlight = (solutionHighlight + delta).coerceIn(0, (solutions.size - 1).coerceAtLeast(0))
@@ -728,8 +748,8 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         commentsView.scrollTo(0, 0)
         renderComments()
         postJob?.cancel()
-        if (p.platform == Platform.NEETCODE) {
-            // NeetCode's article is the whole post; it has no comments (rev 13).
+        if (p.platform != Platform.LEETCODE) {
+            // NeetCode's article (rev 13) and a Codeforces editorial (rev 32) are the whole post, with no comments.
             openPost = Post(s.topicId, s.body.orEmpty(), emptyList(), 0, 1, System.currentTimeMillis())
             renderComments()
             return
@@ -756,7 +776,13 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     private fun refreshPost() {
         val p = problem ?: return
         val s = openSolution ?: return
-        if (p.platform != Platform.LEETCODE) { loadDiscussion(p.slug, force = true); closePost(); return }
+        if (p.platform != Platform.LEETCODE) {
+            // Rev 35: dropped first, so the fresh copy opens, not the one on screen.
+            closePost()
+            discussion = null
+            loadDiscussion(p.slug, force = true)
+            return
+        }
         if (!online) { showMessage("Offline"); return }
         postJob?.cancel()
         postJob = lifecycleScope.launch {
@@ -900,7 +926,7 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         // Rev 24: the harness stops a case at its own limit and writes the results so far to this
         // file, so even a run that has to be killed shows the cases that finished.
         val progress = java.io.File(cacheDir, "runner-progress.json").apply { delete() }
-        val limit = dev.titan.code.runner.LocalJudge.overallLimitMs(inputs.size)
+        val limit = dev.titan.code.runner.LocalJudge.let { it.overallLimitMs(inputs.size, it.caseLimitMs(p)) }
         startJudge(p, Outcome.Running("Run locally", "Running on the phone…")) { _ ->
             val lj = dev.titan.code.runner.LocalJudge
             try {
@@ -1079,6 +1105,10 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         pane = p
         TLog.d("pane -> $p")
         if (p != Pane.CODE) closeOverlays()
+        // Rev 32: a Codeforces editorial is fetched the first time Comments is shown.
+        problem?.let { d ->
+            if (p == Pane.COMMENTS && d.platform == Platform.CODEFORCES && discussion == null && discussionJob?.isActive != true) loadDiscussion(d.slug, force = false)
+        }
         // The editor keeps its cursor, selection and scroll: it's only hidden, never recreated.
         // Other panes focus the key sink so keys still arrive before the IME.
         if (p == Pane.CODE) editor.post { editor.requestFocus() } else keySink.post { keySink.requestFocus() }
@@ -1114,7 +1144,7 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     private fun closeOverlays() {
         paletteOpen = false
         cheatOpen = false
-        completions = emptyList()
+        closeCompletions()
     }
 
     /** Settings and the setup checklist take the whole screen; keys mustn't reach the editor under them. */
@@ -1134,10 +1164,10 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
             settingsOpen -> settingsOpen = false
             cheatOpen -> cheatOpen = false
             paletteOpen -> paletteOpen = false
-            completions.isNotEmpty() -> completions = emptyList()
+            completions.isNotEmpty() -> closeCompletions()
             caseEdit != null && pane == Pane.CODE -> endCaseEdit(cancelled = true)
             pane == Pane.CODE -> Unit
-            pane == Pane.COMMENTS && openSolution != null -> closePost()
+            pane == Pane.COMMENTS && openSolution != null && problem?.let(::singleEntry) != true -> closePost()
             pane == Pane.RESULTS || pane == Pane.COMMENTS -> showPane(Pane.CODE)
             // Owner, rev 10: Back on a statement goes to the problem list. Owner, rev 13: Back
             // never leaves the app; on the list it returns to the open problem (if any).
@@ -1201,12 +1231,48 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
 
     private var completions by mutableStateOf<List<Completer.Item>>(emptyList())
     private var completionPrefix = ""
+    private var completionSite: CompletionSite? = null
+    /** Jedi's last list and where it was for, to narrow at once while the next answer comes (rev 38). */
+    private var jediLast: Pair<Pair<Int, Int>, List<Completer.Item>>? = null
+    private val completionFallback = Runnable { completionSite?.let { completions = fallbackCompletions(it) } }
 
-    /** After each edit: suggestions for the word being typed (2+ characters, in code). */
+    /**
+     * After each edit (rev 38): ask Jedi for the names that fit the cursor, typed by what it infers
+     * (`nums.` → the list methods). Until it answers, the last answer narrowed to the new prefix
+     * stays up; if it hasn't answered in [JEDI_WAIT_MS] (starting, or busy) the word list shows.
+     */
     private fun refreshCompletions() {
-        if (pane != Pane.CODE) { completions = emptyList(); return }
-        completionPrefix = editor.actions.wordPrefix()
-        completions = if (completionPrefix.length < 2) emptyList() else Completer.suggest(completionPrefix, editor.actions.words())
+        handler.removeCallbacks(completionFallback)
+        val site = editor.actions.completionSite().takeIf { pane == Pane.CODE }
+        if (site == null || (!site.afterDot && site.prefix.length < 2)) { closeCompletions(); return }
+        completionSite = site
+        completionPrefix = site.prefix
+        // A test case being edited is JSON, not Python: the word list only.
+        if (caseEdit != null) { completions = fallbackCompletions(site); return }
+        val last = jediLast?.takeIf { it.first == site.anchor }?.second
+        completions = last?.filter { it.label.startsWith(site.prefix) && it.label != site.prefix } ?: emptyList()
+        val words = editor.actions.words()
+        val sent = completer.request(Completer.request(editor.actions.bufferText(), site.line, site.col)) { r ->
+            handler.removeCallbacks(completionFallback)
+            if (completionSite != site || editor.actions.completionSite() != site) return@request
+            val jedi = Completer.parse(r)
+            if (jedi == null) { completions = fallbackCompletions(site); return@request }
+            jediLast = site.anchor to jedi
+            completions = Completer.merge(jedi, site, words)
+        }
+        if (!sent) completions = fallbackCompletions(site)
+        else if (completions.isEmpty()) handler.postDelayed(completionFallback, JEDI_WAIT_MS)
+    }
+
+    /** The word list: buffer words and common names; nothing after a `.` (it can't know the type). */
+    private fun fallbackCompletions(site: CompletionSite): List<Completer.Item> =
+        if (site.afterDot) emptyList() else Completer.suggest(site.prefix, editor.actions.words())
+
+    private fun closeCompletions() {
+        handler.removeCallbacks(completionFallback)
+        if (::completer.isInitialized) completer.cancel()
+        completions = emptyList()
+        completionSite = null
     }
 
     override fun acceptCompletion(): Boolean {
@@ -1216,8 +1282,9 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     }
 
     private fun acceptCompletion(item: Completer.Item) {
-        editor.actions.complete(completionPrefix.length, item.insert)
-        completions = emptyList()
+        val site = completionSite
+        editor.actions.complete(completionPrefix.length, if (site != null) Completer.insertFor(item, site) else item.insert)
+        closeCompletions()
         resetArmedUntil = 0
     }
 
@@ -1847,12 +1914,14 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         ) {
             val platform = problem?.platform ?: Platform.LEETCODE
             if (openSolution != null && commentsTab == CommentsTab.SOLUTIONS) {
-                SmallButton(if (platform == Platform.LEETCODE) "← Solutions · Back" else "← Back") { closePost() }
+                // Rev 35: a Codeforces editorial has no list to go back to.
+                if (platform == Platform.CODEFORCES) SmallButton("Editorial", selected = true) {}
+                else SmallButton(if (platform == Platform.LEETCODE) "← Solutions · Back" else "← Back") { closePost() }
                 Spacer(Modifier.weight(1f))
                 SmallButton("⟳") { refreshPost() }
                 return@Row
             }
-            SmallButton(if (platform == Platform.NEETCODE) "NeetCode solution" else "Solutions", selected = commentsTab == CommentsTab.SOLUTIONS) { commentsTab = CommentsTab.SOLUTIONS }
+            SmallButton(when (platform) { Platform.NEETCODE -> "NeetCode solution"; Platform.CODEFORCES -> "Editorial"; else -> "Solutions" }, selected = commentsTab == CommentsTab.SOLUTIONS) { commentsTab = CommentsTab.SOLUTIONS }
             if (platform.comments) SmallButton("Discussion", selected = commentsTab == CommentsTab.DISCUSSION) {
                 commentsTab = CommentsTab.DISCUSSION
                 commentsView.scrollTo(0, 0)
@@ -1931,6 +2000,8 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
         /** Keeps controls at least 30 px clear of the 100 px rounded screen corners (PLAN §4.1). */
         val CORNER_CLEARANCE = 32.dp
         const val AUTOSAVE_DEBOUNCE_MS = 1000L
+        /** How long to wait for Jedi before showing the word list (rev 38). */
+        const val JEDI_WAIT_MS = 700L
         const val RESET_CONFIRM_MS = 3000L
         const val VERSION_EVERY_MS = 5 * 60 * 1000L
         /** Local run time limit; the phone is slower than LeetCode's judge (agent decision, rev 10). */

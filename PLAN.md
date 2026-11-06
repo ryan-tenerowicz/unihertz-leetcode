@@ -57,6 +57,7 @@ The keyboard backlight can't be controlled by apps and is left to the system. Ho
 │  RunnerClient ──Messenger──► RunnerService in ":runner" (Chaquopy, Python 3.14)              │
 │                              titan_runner · titan_drivers · titan_checkers · titan_limits ·  │
 │                              titan_stress · sortedcontainers                                 │
+│  CompletionClient ──Messenger──► CompletionService in ":complete" (Jedi 0.19.2, titan_complete)│
 └──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -76,7 +77,7 @@ The keyboard backlight can't be controlled by apps and is left to the system. Ho
 
 **Problem keys.** Every problem has one string key: LeetCode's bare slug (`two-sum`), `nc:<neetcode id>` or `cf:<contest><index>`. The store's `provider` column holds the site, and `Platform` lists what each site can do (run on the site, comments, stdin programs).
 
-**Bundled assets** (licences in `app/src/main/assets/LICENSES.md`): JetBrains Mono (OFL), the MagicPython TextMate grammar (MIT), the project's own `titan-dark` theme, three sample problems (Two Sum, Group Anagrams, Valid Parentheses) so a new install works offline, the NeetCode catalog snapshot (939 problems) and the NeetCode 150 / Blind 75 list snapshot.
+**Bundled assets** (licences in `app/src/main/assets/LICENSES.md`): JetBrains Mono (OFL), the MagicPython TextMate grammar (MIT), KaTeX 0.16.11 (MIT, fonts OFL) for maths, Jedi 0.19.2 and parso 0.8.7 (MIT; typeshed's stdlib stubs, Apache 2.0) for completion, the project's own `titan-dark` theme, three sample problems (Two Sum, Group Anagrams, Valid Parentheses) so a new install works offline, the NeetCode catalog snapshot (939 problems) and the NeetCode 150 / Blind 75 list snapshot.
 
 ---
 
@@ -103,7 +104,7 @@ The keyboard backlight can't be controlled by apps and is left to the system. Ho
 
 **Panes**
 
-- **Problem** has two views. The **problem list** (§4.1), and the **statement**: a WebView with the app's dark CSS, local images, tags, limits, collapsible hints and similar problems. A "☰ Problems" bar above the statement (or `sym+P`) shows the list.
+- **Problem** has two views. The **problem list** (§4.1), and the **statement**: a WebView with the app's dark CSS, local images, maths drawn by KaTeX, tags, limits, collapsible hints and similar problems. A "☰ Problems" bar above the statement (or `sym+P`) shows the list.
 - **Code:** the editor (§5). Tapping places the cursor; dragging on the screen scrolls without moving it.
 - **Results** (opens by itself after a run or submit; `sym+T` toggles it):
   - per case: pass/fail, input, your output, expected output, `print()` output, time, and tracebacks with **Go to line N**
@@ -113,7 +114,7 @@ The keyboard backlight can't be controlled by apps and is left to the system. Ho
 - **Comments:**
   - LeetCode: **Solutions** (default) is a list of posts (title, author, votes, comment count, summary). Opening one shows its body and all its comments, 20 at a time with "Load more". **Discussion** shows the problem's threads with replies.
   - NeetCode: the **NeetCode solution** article (explanation and Python code per approach).
-  - Codeforces: a note that comments and editorials live on codeforces.com.
+  - Codeforces: the **Editorial** (§7.3): the contest tutorial's part for this problem, loaded the first time Comments is shown. There's only ever one entry, so it opens straight away with no list; Back goes to Code.
   - Code blocks fold: a folded block shows 4 lines and "▸ N more lines". In comments, long blocks start folded; in posts, Python starts open and other languages folded. Unfenced code is detected. Images in posts aren't downloaded.
 - **Settings** (⚙): see §12. **Setup checklist:** shown on first run and from Settings: Scroll Assistant, the red button's PTT app, optional LeetCode sign-in, and downloading the list.
 - **Cheat sheet** (`sym+H`): generated from the key tables, so it always matches the real bindings.
@@ -162,7 +163,7 @@ The keyboard backlight can't be controlled by apps and is left to the system. Ho
 | Alt | Hold (no sticky Alt) | What's printed on the keycaps: `0–9` and `, . ? ! @ # ' " : _ - + * / ( )` |
 | Alt+Shift | Hold both, any order | `$ % ^ &` on S / D / F / Z (Shift+4/5/6/7 on a normal keyboard) |
 | Leader | Hold `sym`, press a letter | Commands (§5.3) |
-| Palette | Tap `fn` | A strip of `= [ ] { } < > \| ; ~ % ^ &`; tap one to insert it |
+| Palette | Tap `fn` | A strip of `= ( ) [ ] { } < > \| ; ~ %`; tap one to insert it (`^ &` are on Alt+Shift) |
 
 - The palette inserts through the same path as typing, so pairing and type-over apply. `fn` or Back closes it; typing any other key closes it and types the key.
 - **Shift+Backspace** deletes forward. With a selection, Backspace and Shift+Backspace delete it.
@@ -202,7 +203,7 @@ On other panes, editing commands, characters and Enter are ignored and never rea
 - **Smart Enter:** copies the indent; indents after `:` or an unclosed opener; between `()`, `[]` or `{}` opens a block; dedents after `return`, `break`, `continue`, `pass` or `raise`; clears a whitespace-only line.
 - **Smart Backspace:** in leading whitespace, deletes back to the previous indent stop (the way to dedent).
 - **Undo** groups a run of typing (broken by a cursor move, a command or a ~1 s pause); each command is one step.
-- **Completion:** after an edit, when the word before the cursor (in code) has 2+ characters, up to 8 suggestions appear in a strip: words from the buffer (shortest first), then Python keywords, builtins and LeetCode's pre-imported names (`defaultdict`, `Counter`, `deque`, `heapq`, `bisect_left`, `SortedList`, `ListNode`, `TreeNode`…). `sym+Space` takes the first; tap takes any; moving off the word or Back closes it.
+- **Completion (type-aware, rev 38):** after an edit, when the word before the cursor (in code) has 2+ characters, or right after a `.`, a strip of suggestions appears. They come from **Jedi** (the analysis engine behind Python language servers), run in its own `:complete` process on the whole buffer with LeetCode's pre-imports in front (`titan_prelude.py`). Jedi infers types from hints, assignments and the standard library's stubs, so `nums: List[int]` then `nums.` offers `append`, `pop`, `sort`…; `deque`, `Counter`, `SortedList`, `str` and `ListNode`/`TreeNode` (`head.next.`) work the same way. Names defined in the solution come first, then the rest, shortest and A–Z (after a `.`, A–Z); private and dunder names only when the prefix starts with `_`; methods show a dim `()`. Accepting a function or class adds the brackets (rev 39): `append(|)` with the cursor inside, or `clear()|` after when the call takes no arguments (Jedi reports the count; if it's slow to say, inside). No brackets where a bare name is meant: a `(` already follows, decorators, `def`/`class`/`import` lines, `key=len`, `map(int, …)`/`filter(…)`, and classes in type hints (`: `, `->`, inside `[…]`), `except` and `isinstance`. A closing `)` types over the inserted one. For a plain name, buffer words Jedi didn't offer follow. While Jedi works, the last list narrows to the new prefix; if it hasn't answered in 0.7 s (starting, about 2 s after launch) the old word list shows (buffer words, then keywords, builtins and pre-imported names), and nothing after a `.`. A test case being edited (JSON) gets the word list only. `sym+Space` takes the first; tap takes any; the strip scrolls; moving off the word or Back closes it.
 - **Starter code:** the site's Python snippet (Codeforces: a stdin template), with the cursor on the first method's empty body.
 
 ### 5.5 Drafts
@@ -259,11 +260,12 @@ On other panes, editing commands, characters and Enter are ignored and never rea
 ### 7.3 Codeforces
 
 - **List and verdicts:** the public API (`problemset.problems`, `user.status`).
-- **Statements:** loaded in a hidden WebView (Cloudflare) and parsed with jsoup: limits, samples, tags, rating, and maths turned into readable text (`1≤t≤10⁴` with real sub- and superscripts). The page's MathJax has usually drawn the maths by then; each drawn formula is turned back into its TeX source, or into text from its MathML copy. Statements saved before this was fixed are repaired when opened.
+- **Statements:** loaded in a hidden WebView (Cloudflare) and parsed with jsoup: limits, samples, tags, rating, and maths kept as TeX (rev 36). **Maths display:** each formula is saved as `<span class="math" data-tex="TeX">text</span>` (a `<div>` for display maths) and drawn by the bundled KaTeX (`assets/katex/`, `titan-math.js`) when the page is shown, offline. The text (`1≤t≤10⁴` with real sub- and superscripts, sizing commands like `\bigl` dropped, ~200 commands as symbols) shows if KaTeX can't draw a formula. The reading WebViews run JavaScript for this only: a content-security policy allows scripts from the app's own `file:` assets, with no inline scripts or handlers, and site HTML has its scripts removed. Statements with maths saved before rev 36 kept only the text; they're downloaded again the first time they're opened online in a session (`metaData.parser` 2), and the saved copy stays if that fails. The page's MathJax has usually drawn the maths by then; each drawn formula is turned back into its TeX source, or into text from its MathML copy. Statements saved before this was fixed are repaired when opened.
 - **Sign-in:** Codeforces' own `/enter` form in a WebView; the handle is read from the page.
 - **Submit:** the hidden WebView fills the site's own submit form (problem, language, source); the verdict is polled every 2 s for up to 3 minutes. Results show Codeforces' wording ("Wrong answer on test 3"), time, memory and a link; the API doesn't give the failing test.
 - **Language** (Settings): PyPy 3 64-bit (default), PyPy 3 or Python 3.
-- **Running:** locally only, as a stdin/stdout program on the samples (§9). There's no run on Codeforces' judge, and no comments or editorials.
+- **Running:** locally only, as a stdin/stdout program on the samples, under the problem's own time and memory limits (§9). There's no run on Codeforces' judge, and no comment threads.
+- **Editorial:** the tutorial blog entry linked from the contest's "Contest materials" (saved from the statement page, or read from `/contest/<id>` for statements saved earlier), loaded in the hidden WebView. The page's script fills each problem's "Tutorial is loading..." box; if it hasn't after 8 s the app asks for them the same way (`/data/problemTutorial`). The part for this problem runs from its heading (a link to the problem, its title, or a heading like `B. Title`) to the next problem's, so the same problem in the other division is found by title. Spoilers become sections that start **open** (a tap folds one), code is shown **in full** in every language, maths becomes text, images show as "[image]". If the part can't be found, the whole editorial is shown; if no tutorial is linked, "No editorial found" (⟳ looks again). One editorial page saves the part for every problem of that contest in the list. The part is saved as Codeforces' own HTML and formatted when it's shown, so a formatting fault shows it unformatted with a note instead of failing, and formatting fixes reach saved editorials without a download; each formatting step and each formula is handled on its own. A page that loads but can't be read tries the next tutorial link, then offers the browser. Every editorial ends with **Open the editorial in the browser**. Code: `CodeforcesEditorial`, `CodeforcesWeb.editorialPage`, `Repository.fetchEditorial`.
 
 ---
 
@@ -327,8 +329,8 @@ LeetCode judges these with its own code, and NeetCode's versions are the same pr
 
 ### 9.2 Limits
 
-- **Time:** **3 s per case.** A watchdog raises `TimeLimitExceeded` inside the running solution, so the case shows **Time Limit Exceeded** at the line it was on (Go to line works), keeps its output so far, and the other cases still run. The limit exceptions derive from `BaseException`, so `except Exception:` can't swallow them.
-- **Memory:** a case that grows the runner by more than **512 MB** stops with **Memory Limit Exceeded** at its line.
+- **Time:** **3 s per case** on LeetCode and NeetCode; a Codeforces problem uses **its own "time limit per test"** from the statement (1 s, 2.5 s…; 3 s if it can't be read). The phone runs CPython while Codeforces submissions default to PyPy, which is often several times faster, so a local Time Limit Exceeded near the limit may still pass on the site. A watchdog raises `TimeLimitExceeded` inside the running solution, so the case shows **Time Limit Exceeded** at the line it was on (Go to line works), keeps its output so far, and the other cases still run. The limit exceptions derive from `BaseException`, so `except Exception:` can't swallow them.
+- **Memory:** a case that grows the runner by more than **512 MB** (a Codeforces problem: its own "memory limit per test") stops with **Memory Limit Exceeded** at its line.
 - **Output:** a case keeps the first 20,000 characters of `print()` output; more than 1,000,000 stops it with **Output Limit Exceeded**.
 - **Calls that can't be interrupted** (`time.sleep(60)`, one huge built-in operation): the runner gives up or is killed (the app waits each case's limit plus 5 s, between 10 and 120 s in all) and restarts. A progress file written after each case brings back the cases that had finished.
 - A stopped case gives the run LeetCode's verdict (Time / Memory / Output Limit Exceeded).
@@ -365,7 +367,7 @@ Where several answers are right, a **checker** (`titan_checkers.py`) validates y
 |---|---|
 | Statement | Cleaned HTML with images downloaded and pointed at local files |
 | Details | Title, difficulty, tags, hints, limits, `metaData`, ids, similar problems, starter code |
-| Discussion | LeetCode, opened online: the top 30 threads with replies for the best 10, and 20 solution titles with the top 3 bodies; a post's comments are saved when you open it. NeetCode: the solution article |
+| Discussion | LeetCode, opened online: the top 30 threads with replies for the best 10, and 20 solution titles with the top 3 bodies; a post's comments are saved when you open it. NeetCode: the solution article. Codeforces: the editorial's part (§7.3), saved when Comments is shown online or by a pack |
 | Test cases | §8 |
 | Your work | Drafts and their history, submissions, practice timer |
 
@@ -373,7 +375,7 @@ Where several answers are right, a **checker** (`titan_checkers.py`) validates y
 
 - **Save on open:** opening a problem online saves it, and the next *K* problems in the list (Settings, default 5, 0–20; not on Codeforces).
 - **Offline packs** (Settings → Offline packs): a LeetCode **study plan** (Top Interview 150, LeetCode 75, Top 100 Liked, Binary Search, Dynamic Programming), a **curated list** (NeetCode 150, Blind 75…), or **the list as filtered now**. Each problem saves its statement, 20 threads with replies for 3, and 20 solution titles with 3 bodies.
-- **Everything on LeetCode / NeetCode / Codeforces:** refreshes the list, then saves every problem that isn't Premium or Pro. Pressed again (**Update**), it adds problems published since and retries any that failed. Estimates are shown (LeetCode ~3,100 problems, a few hours; NeetCode ~790, minutes; Codeforces ~11,500, about 10 hours).
+- **Everything on LeetCode / NeetCode / Codeforces:** refreshes the list, then saves every problem that isn't Premium or Pro. Pressed again (**Update**), it adds problems published since and retries any that failed. Estimates are shown (LeetCode ~3,100 problems, a few hours; NeetCode ~790, minutes; Codeforces ~11,500 with editorials, about 16 hours).
 - **How downloads run** (WorkManager):
   - Wi-Fi only unless Settings allows mobile data; they need storage not low.
   - Every statement first, then discussions.
@@ -413,7 +415,7 @@ Back closes Settings.
 
 ## 13. Testing and debugging
 
-- **Kotlin unit tests** (`./gradlew :app:testDebugUnitTest`): input routing and the leader table (no key has two commands), the gesture engine against Phase 0 recordings, swipe haptics, `PyEdit` rules, starter-code placement against real snippets, completion, drafts, the problem filter and list, the API parsers for all three sites (with saved fixtures), the judge's response parsers, local-judge requests and results, the test-case buffer, the practice timer, and pack-download retries.
+- **Kotlin unit tests** (`./gradlew :app:testDebugUnitTest`) run on the desktop JVM, whose regex engine is more lenient than the phone's (ICU); `RegexCompatTest` scans every `Regex(…)` in the app for what ICU rejects (braces inside `[...]`, stray braces, unknown inline flags). They cover: input routing and the leader table (no key has two commands), the gesture engine against Phase 0 recordings, swipe haptics, `PyEdit` rules, starter-code placement against real snippets, completion, drafts, the problem filter and list, the API parsers for all three sites (with saved fixtures), the judge's response parsers, local-judge requests and results, the test-case buffer, the practice timer, and pack-download retries.
 - **Harness tests** (`scripts/test-python.sh`, on the Mac's Python): drivers, limits, checkers, stress generation and stdin mode.
 - **On the phone:** `scripts/debug-run.sh request.json` runs one harness request on the phone's Python without touching the editor or any draft (a receiver that exists only in debug builds).
 - **Manual checks** on the phone: [`docs/test-checklist.md`](docs/test-checklist.md), grouped by feature.
@@ -437,7 +439,7 @@ Everything builds locally on the owner's Mac; there's no remote CI.
 ## 15. Known limitations
 
 - **Unconfirmed parsers:** LeetCode's and NeetCode's Run/Submit response parsers and the Codeforces submit form follow the documented shapes but still need a signed-in run to confirm (owner test queue).
-- **Codeforces:** no run on its judge, no comments, editorials, contests or gym problems.
+- **Codeforces:** no run on its judge, no comment threads, contests or gym problems. Editorials are cut out by heading, so an unusual layout shows the whole editorial; a tutorial that's only an external link or PDF isn't shown.
 - **Local runner:** Quad Tree (427, 558) and concurrency problems aren't checked; the pre-imported names haven't been confirmed against LeetCode with a probe run.
 - **Comments:** images in posts aren't downloaded (shown as "[image]").
 - **Editing:** no word-wise movement, block dedent or move-line bindings; multi-line triple-quoted strings aren't recognised for pairing.

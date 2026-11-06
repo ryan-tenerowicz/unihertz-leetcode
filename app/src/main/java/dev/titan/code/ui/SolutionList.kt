@@ -63,7 +63,7 @@ fun SolutionList(
                     Text(s.title, color = Colors.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(
                         // NeetCode's article (topicId 0, rev 13) has no votes or comments.
-                        (if (s.topicId == 0L) s.author else "${s.author} · ▲ ${s.votes} · 💬 ${s.commentCount}") + if (s.body != null) " · ⤓" else "",
+                        (if (s.topicId == 0L || s.html) s.author else "${s.author} · ▲ ${s.votes} · 💬 ${s.commentCount}") + if (s.body != null) " · ⤓" else "",
                         color = Colors.dim, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
                     )
                     if (s.summary.isNotEmpty()) {

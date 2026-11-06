@@ -70,6 +70,8 @@ data class Solution(
     val body: String?,
     val commentCount: Int = 0,
     val summary: String = "",
+    /** [body] is ready HTML, not Markdown: a Codeforces editorial (rev 32). */
+    val html: Boolean = false,
 )
 
 /** An opened solution post: its body and the comments loaded so far (pages of [Repository.POST_PAGE]). */

@@ -52,6 +52,9 @@ interface EditorActions {
     fun wordPrefix(): String = ""
     fun complete(prefixLen: Int, text: String) {}
     fun words(): Set<String> = emptySet()
+    /** Rev 38: the spot for type-aware completion, and the whole buffer to analyse. */
+    fun completionSite(): CompletionSite? = null
+    fun bufferText(): String = ""
 
     /** Turn soft wrap on or off; returns the new state. */
     fun toggleSoftWrap(): Boolean

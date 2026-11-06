@@ -18,6 +18,7 @@ import dev.titan.code.data.db.ProblemRow
 import dev.titan.code.data.db.StoreDb
 import dev.titan.code.data.leetcode.LeetCodeApi
 import dev.titan.code.data.codeforces.CodeforcesApi
+import dev.titan.code.data.codeforces.CodeforcesEditorial
 import dev.titan.code.data.codeforces.CodeforcesWeb
 import dev.titan.code.data.neetcode.NeetCodeApi
 import dev.titan.code.data.neetcode.NeetCodeHttp
@@ -211,11 +212,25 @@ class Repository(
     /** True if the saved copy is a bundled sample that the real statement should replace. */
     suspend fun isPlaceholder(slug: String): Boolean = withContext(Dispatchers.IO) { dao.detail(pv(slug), slug)?.fetchedAt == 0L }
 
-    /** True if the saved copy came from an older NeetCode parser and should be downloaded again (rev 23). */
-    suspend fun isStale(slug: String): Boolean = Platform.of(slug) == Platform.NEETCODE && withContext(Dispatchers.IO) {
-        val meta = dao.detail(pv(slug), slug)?.metaData ?: return@withContext false
-        runCatching { org.json.JSONObject(meta).optInt("parser") }.getOrDefault(0) < NeetCodeApi.PARSER
+    /**
+     * True if the saved copy came from an older parser and should be downloaded again: NeetCode
+     * (rev 23), and Codeforces statements with maths saved before rev 36, which kept only the
+     * text and not the TeX that KaTeX draws. Codeforces is tried once per session, so a browser
+     * check doesn't hold up every open; the saved copy stays until a download succeeds.
+     */
+    suspend fun isStale(slug: String): Boolean = when (Platform.of(slug)) {
+        Platform.NEETCODE -> withContext(Dispatchers.IO) {
+            val meta = dao.detail(pv(slug), slug)?.metaData ?: return@withContext false
+            runCatching { org.json.JSONObject(meta).optInt("parser") }.getOrDefault(0) < NeetCodeApi.PARSER
+        }
+        Platform.CODEFORCES -> slug !in staleTried && withContext(Dispatchers.IO) {
+            val row = dao.detail(pv(slug), slug) ?: return@withContext false
+            CodeforcesApi.needsReparse(row.metaData, row.contentHtml)
+        }.also { if (it) staleTried += slug }
+        Platform.LEETCODE -> false
     }
+
+    private val staleTried = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 
     /** Download a problem, its statement images, and save it (save-on-open, PLAN §8.4). */
     suspend fun fetchDetail(slug: String): ProblemDetail? = when (Platform.of(slug)) {
@@ -250,9 +265,67 @@ class Repository(
     private suspend fun fetchCodeforces(slug: String): ProblemDetail {
         val (contestId, index) = CodeforcesApi.split(slug)
         val st = CodeforcesApi.parseStatement(cf.page(CodeforcesApi.problemUrl(contestId, index)), slug)
-        val saved = save(st.detail)
-        withContext(Dispatchers.IO) { dao.upsertDiscussion(DiscussionRow(Platform.CODEFORCES.id, slug, "[]", "[]", System.currentTimeMillis())) }
-        return saved
+        // Rev 32: the editorial is saved separately (fetchEditorial), not an empty entry as before.
+        return save(st.detail)
+    }
+
+    /**
+     * A Codeforces problem's editorial (rev 32): the contest's tutorial blog entry, read in the
+     * hidden browser, cut down to this problem's part, as the Comments pane's one "post". The
+     * same entry covers the whole contest, so every problem of the contest in the list gets its
+     * part saved at once (pack downloads then skip them). With no part found, the whole
+     * editorial is kept; with no tutorial linked, a "No editorial found" entry, so it isn't
+     * looked for on every open (⟳ looks again).
+     */
+    private suspend fun fetchEditorial(slug: String): Discussion {
+        val (contestId, index) = CodeforcesApi.split(slug)
+        val d = savedDetail(slug) ?: fetchDetail(slug) ?: throw CodeforcesApi.ApiError("Couldn't load the problem")
+        val ids = CodeforcesApi.editorialIds(d.metaData)?.takeIf { it.isNotEmpty() }
+            ?: CodeforcesEditorial.tutorialIds(cf.page(CodeforcesEditorial.contestUrl(contestId)))
+        val now = System.currentTimeMillis()
+        val siblings = withContext(Dispatchers.IO) {
+            dao.problems(Platform.CODEFORCES.id).filter { it.frontendId == contestId && it.slug != slug }
+        }.map { CodeforcesApi.split(it.slug).second to it }
+        suspend fun save(key: String, s: Solution) =
+            dao.upsertDiscussion(DiscussionRow(Platform.CODEFORCES.id, key, "[]", solutionsJson(listOf(s)), now))
+
+        if (ids.isEmpty()) {
+            val none = Solution(0, "No editorial found", "Codeforces", 0,
+                "<p class=\"note\">This contest's page links no tutorial. Some contests never get one, or it's added later: ⟳ looks again.</p>",
+                summary = "This contest's page links no tutorial", html = true)
+            withContext(Dispatchers.IO) { save(slug, none); siblings.forEach { (_, p) -> save(p.slug, none) } }
+            return Discussion(emptyList(), listOf(none), now)
+        }
+        // Rev 33: a page that loads but can't be read is skipped (the next tutorial link is tried);
+        // network errors and browser checks still stop here, so the pane says so and ⟳ retries.
+        val unreadable = mutableListOf<String>()
+        val entries = ids.take(3).mapNotNull { id ->
+            val html = cf.editorialPage(CodeforcesEditorial.blogUrl(id))
+            runCatching { CodeforcesEditorial.parseEntry(html, id) }
+                .onFailure { TLog.w("editorial $id: $it"); unreadable += "${it.message ?: it}" }.getOrNull()
+        }
+        if (entries.isEmpty()) {
+            // Not saved, so the next open tries again; the browser link always works.
+            val id = ids.first()
+            return Discussion(emptyList(), listOf(Solution(id, "Editorial (couldn't be read here)", "Codeforces", 0,
+                "<p class=\"note\">The editorial page loaded, but the app couldn't read it (${HtmlClean.escape(unreadable.joinToString("; ").take(300))}). " +
+                    "Open it in the browser below, or ⟳ to try again.</p>",
+                summary = "Open it in the browser from here", html = true)), now)
+        }
+        fun editorialFor(idx: String, title: String): Solution? = entries.firstNotNullOfOrNull { e ->
+            runCatching { CodeforcesEditorial.section(e, contestId, idx, title) }
+                .onFailure { TLog.w("editorial ${e.id} $idx: $it") }.getOrNull()
+                ?.let { part -> Solution(e.id, "Editorial: $idx. $title", e.author.ifEmpty { "Codeforces" }, 0, part, summary = e.title, html = true) }
+        }
+        val first = entries.first()
+        val mine = editorialFor(index, d.title) ?: Solution(first.id, "Editorial (whole contest)", first.author.ifEmpty { "Codeforces" }, 0,
+            CodeforcesEditorial.whole(first), summary = "${first.title}. This problem's part couldn't be found, so all of it is shown.", html = true)
+        withContext(Dispatchers.IO) {
+            save(slug, mine)
+            // One problem's part going wrong never costs the others theirs.
+            siblings.forEach { (idx, p) -> editorialFor(idx, p.title)?.let { save(p.slug, it) } }
+        }
+        return Discussion(emptyList(), listOf(mine), now)
     }
 
     /** Download a statement's images, point it at the local copies, and save it. */
@@ -303,7 +376,10 @@ class Repository(
     data class Discussion(val comments: List<Comment>, val solutions: List<Solution>, val fetchedAt: Long)
 
     suspend fun savedDiscussion(slug: String): Discussion? = withContext(Dispatchers.IO) {
-        dao.discussion(pv(slug), slug)?.let { Discussion(commentsFrom(it.commentsJson), solutionsFrom(it.solutionsJson), it.fetchedAt) }
+        dao.discussion(pv(slug), slug)
+            // Before rev 32 every Codeforces problem got an empty entry: not an editorial yet.
+            ?.takeUnless { it.provider == Platform.CODEFORCES.id && it.solutionsJson == "[]" }
+            ?.let { Discussion(commentsFrom(it.commentsJson), solutionsFrom(it.solutionsJson), it.fetchedAt) }
     }
 
     /**
@@ -311,8 +387,9 @@ class Repository(
      * the top [solutionCount] Python solutions with full text. About 20 requests, rate-limited.
      */
     suspend fun fetchDiscussion(slug: String, threads: Int = 30, withReplies: Int = 10, solutionCount: Int = 20, bodies: Int = 3): Discussion {
+        if (Platform.of(slug) == Platform.CODEFORCES) return fetchEditorial(slug)
         if (Platform.of(slug) != Platform.LEETCODE) {
-            // NeetCode's article and Codeforces' (empty) entry are saved with the statement.
+            // NeetCode's article is saved with the statement.
             savedDiscussion(slug)?.let { return it }
             fetchDetail(slug)
             return savedDiscussion(slug) ?: Discussion(emptyList(), emptyList(), System.currentTimeMillis())
@@ -671,7 +748,7 @@ class Repository(
      * Save every problem in the pack in two passes: every statement first (so as many problems
      * as possible open offline early), then discussions and solution lists (lighter than an
      * interactive open: 20 threads, replies for 3, top 3 solution bodies; NeetCode's article
-     * and Codeforces' empty entry come with the statement). Already-saved problems are skipped,
+     * comes with the statement; Codeforces' editorial is one page per contest, rev 32). Already-saved problems are skipped,
      * so an interrupted download resumes where it stopped.
      *
      * Rev 25, for downloads of thousands: one problem that won't load (gone, unparseable, a
@@ -712,7 +789,9 @@ class Repository(
         }
         val haveDisc = withContext(Dispatchers.IO) { slugs.map(::pv).distinct().flatMap { dao.discussionSlugs(it) }.toSet() }
         slugs.forEachIndexed { i, slug ->
-            if (slug !in haveDisc && slug !in failed) {
+            // Codeforces (rev 32): one editorial saves the whole contest's, so check again each time.
+            val have = slug in haveDisc || (Platform.of(slug) == Platform.CODEFORCES && savedDiscussion(slug) != null)
+            if (!have && slug !in failed) {
                 attempt(slug) { fetchDiscussion(slug, threads = 20, withReplies = 3, solutionCount = 20, bodies = 3); true }
             }
             report("discussions", i + 1, force = i == slugs.size - 1)
@@ -778,7 +857,7 @@ class Repository(
 
     private fun solutionsJson(ss: List<Solution>): String = JSONArray(ss.map {
         JSONObject().put("topicId", it.topicId).put("title", it.title).put("author", it.author).put("votes", it.votes)
-            .put("body", it.body ?: JSONObject.NULL).put("comments", it.commentCount).put("summary", it.summary)
+            .put("body", it.body ?: JSONObject.NULL).put("comments", it.commentCount).put("summary", it.summary).put("html", it.html)
     }).toString()
 
     private fun solutionsFrom(json: String): List<Solution> {
@@ -786,7 +865,7 @@ class Repository(
         return (0 until a.length()).map {
             val o = a.getJSONObject(it)
             Solution(o.getLong("topicId"), o.getString("title"), o.getString("author"), o.getInt("votes"),
-                if (o.isNull("body")) null else o.getString("body"), o.optInt("comments"), o.optString("summary"))
+                if (o.isNull("body")) null else o.getString("body"), o.optInt("comments"), o.optString("summary"), o.optBoolean("html"))
         }
     }
 

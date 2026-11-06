@@ -289,6 +289,33 @@ class PyEdit(private val buf: TextBuffer, var indentWidth: Int = 4) {
     }
 
     /**
+     * Where a completion would go (rev 38): the identifier before the cursor (may be empty right
+     * after a `.`), whether it follows a `.`, and the cursor (0-based line and column), in code
+     * only. Null when there's nothing to complete: a selection, mid-word, a number, a string or
+     * comment, or no prefix and no `.`.
+     */
+    fun completionSite(): CompletionSite? {
+        if (hasSelection) return null
+        val p = cursor
+        val line = buf.line(p.line)
+        var i = p.col
+        while (i > 0 && isWord(line[i - 1])) i--
+        val w = line.substring(i, p.col)
+        if (w.isNotEmpty() && w[0].isDigit()) return null
+        if (p.col < line.length && isWord(line[p.col])) return null
+        val dot = i > 0 && line[i - 1] == '.'
+        if (w.isEmpty() && !dot) return null
+        // `1.` and `x = 2.5` are numbers, not attribute access.
+        if (dot && w.isEmpty() && i >= 2 && line[i - 2].isDigit()) {
+            var j = i - 2
+            while (j > 0 && isWord(line[j - 1])) j--
+            if (line[j].isDigit()) return null
+        }
+        if (PyScan.contextAt(line, i) != PyScan.Context.CODE) return null
+        return CompletionSite(w, dot, p.line, p.col, line.substring(0, if (dot) i - 1 else i), line.substring(p.col))
+    }
+
+    /**
      * Replace the [prefixLen] characters before the cursor with [text], as one undo step.
      * In [text], a tab is one indent level, each new line keeps the current line's indent,
      * and `$0` marks where the cursor ends (default: the end).
@@ -372,6 +399,16 @@ class PyEdit(private val buf: TextBuffer, var indentWidth: Int = 4) {
 }
 
 /** A one-line Python scanner: is a column in code, a string or a comment? */
+/** See [PyEdit.completionSite]. */
+/** [before]: the line before the word (and its `.`); [after]: the line after the cursor. */
+data class CompletionSite(
+    val prefix: String, val afterDot: Boolean, val line: Int, val col: Int,
+    val before: String = "", val after: String = "",
+) {
+    /** Where the word being completed starts; the suggestions belong to this spot. */
+    val anchor get() = line to col - prefix.length
+}
+
 object PyScan {
     enum class Context { CODE, STRING, COMMENT }
 

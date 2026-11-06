@@ -28,7 +28,7 @@ import dev.titan.code.input.InputRouter
 import dev.titan.code.input.Leader
 
 /** Symbols the key map lacks, in the `fn` palette (PLAN §5.3). */
-val PALETTE_SYMBOLS = listOf("=", "[", "]", "{", "}", "<", ">", "|", ";", "~", "%", "^", "&")
+val PALETTE_SYMBOLS = listOf("=", "(", ")", "[", "]", "{", "}", "<", ">", "|", ";", "~", "%")
 
 /** The `fn` symbol palette: a compact strip above the status line (PLAN §5.3). */
 @Composable
@@ -69,9 +69,13 @@ fun CompletionStrip(mono: FontFamily, items: List<dev.titan.code.editor.Complete
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    item.label, color = Colors.text, fontSize = 14.sp, fontFamily = mono, maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(item.label, color = Colors.text, fontSize = 14.sp, fontFamily = mono, maxLines = 1)
+                    // Rev 38: methods and functions show "()" so a name's kind is visible at a glance.
+                    if (item.kind == dev.titan.code.editor.Completer.Kind.FUNCTION) {
+                        Text("()", color = Colors.dim, fontSize = 12.sp, fontFamily = mono, maxLines = 1)
+                    }
+                }
             }
         }
         Text("sym+Space", color = Colors.dim, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp))

@@ -209,6 +209,8 @@ private class SoraActions(private val ed: TitanEditor) : EditorActions, TextBuff
     override fun wordPrefix(): String = py.wordPrefix()
     override fun complete(prefixLen: Int, text: String) = edit { py.complete(prefixLen, text) }
     override fun words(): Set<String> = py.words()
+    override fun completionSite(): CompletionSite? = py.completionSite()
+    override fun bufferText(): String = py.allText()
     override fun selectLine() = edit { py.selectLine() }
     override fun deleteLine() = edit { py.deleteLine() }
     override fun duplicateLine() = edit { py.duplicateLine() }

@@ -188,7 +188,7 @@ interface StoreDao {
 
     @Upsert suspend fun upsertDiscussion(row: DiscussionRow)
 
-    @Query("SELECT COUNT(*) FROM discussions")
+    @Query("SELECT COUNT(*) FROM discussions WHERE NOT (provider = 'codeforces' AND solutionsJson = '[]')")
     suspend fun discussionCount(): Int
 
     @Query("DELETE FROM discussions")
@@ -240,7 +240,8 @@ interface StoreDao {
     @Query("DELETE FROM packs WHERE id = :id")
     suspend fun deletePack(id: Long)
 
-    @Query("SELECT slug FROM discussions WHERE provider = :provider")
+    /** Rev 32: Codeforces' old empty entries (from before editorials) don't count. */
+    @Query("SELECT slug FROM discussions WHERE provider = :provider AND NOT (provider = 'codeforces' AND solutionsJson = '[]')")
     suspend fun discussionSlugs(provider: String): List<String>
 
     @Query("DELETE FROM details WHERE provider = :provider AND fetchedAt > 0 AND slug IN (:slugs)")

@@ -380,14 +380,15 @@ private fun Step(title: String, done: Boolean?, detail: String, action: @Composa
 /**
  * Rough size and time for "Everything on …" (rev 25). Measured per problem: LeetCode about
  * 1 s per statement and 5 s per discussion (about 9 requests); NeetCode about 1 s with its
- * article; Codeforces about 3 s per page in the hidden browser, with no discussion.
+ * article; Codeforces about 3 s per page in the hidden browser, plus the editorial (rev 32):
+ * one or two pages of about 8 s per contest, shared by its ~5 problems.
  */
 private fun everythingEstimate(p: dev.titan.code.data.Platform, n: Int): String {
     if (n == 0) return "size unknown"
     val (kb, sec) = when (p) {
         dev.titan.code.data.Platform.LEETCODE -> 60 to 6
         dev.titan.code.data.Platform.NEETCODE -> 25 to 1
-        dev.titan.code.data.Platform.CODEFORCES -> 15 to 3
+        dev.titan.code.data.Platform.CODEFORCES -> 20 to 5
     }
     val mb = n * kb / 1024
     val hours = n * sec / 3600.0

@@ -25,6 +25,7 @@ All features described in PLAN.md are built, unit-tested and installed on the ow
 ## Still to check
 
 The full list is [`docs/test-checklist.md`](docs/test-checklist.md). The ones that matter most:
+1. **Codeforces editorials on the real site** (rev 32): pass Cloudflare's check, open Comments on a Codeforces problem, and check the problem's part shows.
 1. **Signed-in runs and submits** on LeetCode, NeetCode and Codeforces (checklist §10): they confirm the response parsers and the Codeforces submit form.
 2. **The judge's Python and pre-imported names** (checklist §10): one `sym+E` run on LeetCode printing `sys.version` and `globals()`.
 3. **Everything on LeetCode / Codeforces** (checklist §11): long downloads, rate limits.
@@ -63,6 +64,114 @@ Known limitations are listed in PLAN §15.
 ---
 
 ## Work log
+
+### 2026-11-05 (rev 40): `Counter` gets its `()`
+
+The owner saw functions get brackets but `Counter` not. Jedi resolved `Counter` from the first star import that has it (`typing`, an alias, kind "statement"); at run time `from collections import *` comes later and wins.
+
+- `titan_complete` adds `from collections import Counter, OrderedDict, ChainMap, defaultdict, deque` after the pre-imports (its own copy; the runner's prelude is unchanged).
+- Names of kind "statement" that resolve to one function or class outside `typing` take that kind (`insort`). Typing aliases (`List`, `Optional`) stay bare names.
+- **Tests:** `test_collections_classes_beat_typing_aliases`. All pass; installed.
+
+### 2026-11-05 (rev 39): completion adds `()` to functions and classes
+
+The owner asked for brackets on accepted functions and classes, and whether it was a Jedi setting. Jedi's `add_bracket_after_function` only appends `(` to a function's remaining text, so it's done in the app instead.
+
+- `titan_complete.py` reports `args` (fewest parameters over the signatures) for functions and classes, within a 150 ms budget per request: the first look at a library (SortedList) took about 1 s on the Mac.
+- `Completer.insertFor`: `name(|)`, or `name()|` for no arguments. A bare name after `@`, on `def`/`class`/`import`/`from` lines, before an existing `(`, after `key=` or `map(`/`filter(`, and for classes in hints, `[…]`, `except` and `isinstance`. `CompletionSite` carries the text around the word for this. Jedi's "property" kind is no longer treated as a function.
+- **Tests:** `CompleterTest.bracketsForCalls` (18 cases), `completesWithCursorInsideBrackets`, and `test_argument_counts`. All pass; installed. Not tried by hand in the editor (no typing in drafts).
+
+### 2026-11-05 (rev 38): type-aware completion with Jedi
+
+The owner asked for proper, LSP-style suggestions based on type (a list's methods after `list_name.`), not a hard-coded name list.
+
+- **Engine:** Jedi 0.19.2 + parso 0.8.7 (parso 0.8.7 has the 3.14 grammar) vendored in `app/src/main/python/`, trimmed to 3.9 MB (Python 2 and third-party stubs removed). Chaquopy `extractPackages("jedi", "parso", "sortedcontainers")` puts their files on disk, since Jedi reads its stubs and parso its grammars with `open()`.
+- **Process:** `CompletionService` in `:complete`, with `CompletionClient` (Messenger), so suggestions never wait behind a run or die with a runner restart. `PythonStart` takes a file lock so the two processes don't unpack Python at the same time on a first launch. Jedi warms up at launch (about 2.4 s to ready on the phone). Stale requests are skipped; only the newest answer is shown.
+- **Python:** `titan_complete.py` runs `jedi.Script(prelude + buffer).complete()` in-process (`InterpreterEnvironment`). LeetCode's pre-imports moved to `titan_prelude.py` (shared with the runner); the node classes got type hints so `head.next.` resolves.
+- **Editor:** `PyEdit.completionSite()` (prefix, after-a-dot, cursor; null in strings, comments, numbers like `1.`, mid-word). `Completer.parse`/`merge`; the old list stays as the fallback. MainActivity narrows the last answer while waiting and falls back after 0.7 s. The strip shows up to 60 names (it scrolls) and a dim `()` on methods.
+- **Checked on the phone** (an on-device self-test in the service, since removed; I didn't type in any draft): `list_name.` → append…sort; `nums.so` → sort; `head.next.` → next, val; `deque`, `SortedList`, `Counter.mo`, `str.`; `he` → the `height` parameter first. 36–360 ms per request on Python 3.14.
+- **Known:** `defaultdict(list)[k].` gives nothing (Jedi can't infer the factory's type). The in-editor strip flow (narrowing, fallback) is covered by unit tests but not yet tried by hand on the phone.
+- **Tests:** `test_titan_complete.py` (5, on the Mac's Python 3.9), `CompleterTest` (+3: site, parse, merge). All pass.
+
+### 2026-11-05 (rev 37): `fn` palette gets `( )`
+
+- The `fn` strip is now `= ( ) [ ] { } < > | ; ~ %`. `^` and `&` came off to make room; they stay on Alt+Shift+F/Z.
+
+### 2026-11-04 (rev 36): Codeforces maths drawn with KaTeX
+
+**Owner reported:** symbols misparsed in Codeforces problems, e.g. 2273D showed "minbigl(|x-aᵢ|, |x-bᵢ|bigr)".
+
+**Cause:** maths was converted to text by a hand-written TeX converter (`texBody`, ~90 commands) when the statement was saved, keeping only the text. Any command it didn't know fell through as its name (`\bigl` → "bigl"), and `\{ \}` lost their braces (mapped to `{`, then every brace was stripped). Statements already saved couldn't be repaired: the TeX was gone.
+
+**Done:**
+- **KaTeX 0.16.11** bundled (`assets/katex/`: `katex.min.js`, `katex.min.css`, 20 woff2 fonts, ~600 KB; MIT, fonts OFL; recorded in `LICENSES.md`), with `titan-math.js` drawing every `[data-tex]` element (`throwOnError`, so a formula KaTeX rejects keeps the text).
+- `CodeforcesApi.tex` writes `<span class="math" data-tex="TeX">text</span>` (`<div>` for display maths). Statements and editorials both go through it; editorials are formatted on display (rev 33), so saved ones are drawn at once.
+- `ProblemView`: JavaScript on, with a content-security policy (`script-src file:`, no inline scripts or handlers, `default-src 'none'`), no file-URL access from scripts; KaTeX is only loaded on pages with maths. Site HTML still has its scripts removed (`HtmlClean`).
+- **The text fallback rewritten:** ~200 commands as symbols (relations, sets, arrows, operators, functions, delimiters, Greek), sizing and style commands dropped (`\bigl`, `\left`, `\displaystyle`…), `\dfrac`, `\binom` → C(n, k), `\sqrt[3]`, `\pmod`, accents, `\begin/\end`, `\\`, `~`; escaped braces and `\&` kept.
+- **Old statements:** `metaData.parser` 2; `CodeforcesApi.needsReparse` marks statements with maths saved before (no `data-tex`) as stale, so they're downloaded again the first time they're opened online in a session; the saved copy stays if that fails (e.g. a browser check).
+- `problem.css`: KaTeX size, display maths centred and scrolling sideways when wide.
+
+**On the phone:** 2273D re-downloaded on open and shows min(|x − aᵢ|, |x − bᵢ|) as a display formula, 1 ≤ x ≤ 10⁴ and the rest drawn by KaTeX; no CSP errors from the reading pane.
+
+**Tests:** `TexTest` (5: the 2273D formula, structures, symbols, `data-tex` escaping, reparse rule); `CodeforcesApiTest` updated for `data-tex`. All 160 Kotlin tests pass.
+
+### 2026-11-04 (rev 35): Codeforces Comments opens the editorial directly; two maths fixes
+
+**Owner asked:** is there only ever one editorial per Codeforces problem? The one-row list is an extra tap.
+
+**Answer:** yes: `fetchEditorial` always stores exactly one entry (the problem's part, the whole editorial, or "No editorial found"); a contest linking several tutorials (e.g. ru and en) is resolved to one.
+
+**Done:** `MainActivity.renderComments` opens the single entry for Codeforces (`singleEntry`) instead of the list; the bar shows "Editorial" instead of "← Back"; Back goes to Code (not to a one-row list); ⟳ drops the open copy first so the fresh one opens. LeetCode and NeetCode unchanged.
+
+**Maths (seen in 2275D's editorial: "aᵢ gt bᵢ ∨ \ aᵢ"):** `\gt` and `\lt` added; symbols ending in punctuation (`\ `, `\,`, `\;`, `\{`…) no longer need a non-letter after them (only commands ending in a letter keep the `\le`/`\left` guard). Test in `CodeforcesEditorialTest.savedRawAndShownSafely`. All tests pass; checked on the phone (2275D): opens straight to the editorial, Back → Code, "aᵢ > bᵢ ∨ aᵢ > cᵢ".
+
+### 2026-11-04 (rev 34): editorials open by default
+
+**Owner asked:** open the editorial by default, so the tutorial and the code are easy to read.
+
+**Done:** `CodeforcesEditorial.render`: spoilers become `<details open>` (a tap still folds one), and code is shown in full in every language (`Markdown.Fold.NONE`) instead of C++ folding to 4 lines. Editorials are formatted when opened (rev 33), so saved ones change too, with no download. Solution posts and comments keep their folding. Also `problem.css`: `pre code` no longer takes the inline-code background, which drew a band behind every line of a code block (posts too). Tests updated; all pass; installed; checked on 2276F: tutorial open, C++ shown in full.
+
+### 2026-11-04 (rev 33): editorial regex crash on the phone; editorials made resilient
+
+**Owner reported:** opening a Codeforces editorial (2275B) showed "Error: Syntax error in regexp pattern near index 107".
+
+**Cause:** `CodeforcesApi.texBody` (TeX → text, since rev 13) used `[^{}]` in six patterns. The desktop JVM, where the unit tests run, reads braces in a character class as plain characters; Android's `java.util.regex` is ICU, which reads `{…}` inside `[...]` as a string and rejects `{}`. Any `$$$…$$$` maths therefore threw on the phone, failing the whole editorial. The same `tex()` runs on every Codeforces statement download, so **statements with maths most likely failed to download on the phone too** (saved ones were unaffected: they're only repaired, without `tex`). rev 32's `(?iu)` flag was a second risk (ICU has no `u`).
+
+**Fixed:**
+- Every brace in the TeX patterns escaped (`\{([^\{\}]*)\}`), patterns compiled once; `(?iu)` replaced by matching lowercased text.
+- `RegexCompatTest`: scans every `Regex(…)` literal in `src/main` (with `$CONST` templates from the same file) for braces inside `[...]`, braces that aren't a repeat count, and inline flags other than `imsxw`.
+
+**More resilient editorials:**
+- Saved as Codeforces' HTML (marked `<!--cf-editorial-->`) and formatted by `CodeforcesEditorial.show` when opened: a failure shows the editorial unformatted with a note; fixes apply to saved editorials without a download. Bodies saved by rev 32 (already formatted) are shown as they are.
+- Formatting runs in separate steps (code, spoilers, tutorials, cleanup, maths), each allowed to fail alone; `tex()` falls back to the TeX of one formula; `unMathJax` failures keep the drawing.
+- `fetchEditorial`: a page that loads but can't be read is skipped and the next tutorial link tried; if none can be read, a not-saved entry explains and offers the browser (⟳ retries). One problem's part failing doesn't stop the rest of the contest's. Network errors and browser checks still stop, as before.
+- Every editorial ends with **Open the editorial in the browser** (`titan://open?` links, codeforces.com only, through `openUrl`). The entry keeps the blog id as `topicId`.
+
+**Tests:** `RegexCompatTest` (2), `CodeforcesEditorialTest.savedRawAndShownSafely`; the other editorial tests now format through `show`. All Kotlin tests pass; installed.
+
+### 2026-11-04 (rev 32): Codeforces editorials in the Comments pane
+
+**Owner asked:** support editorials for Codeforces problems, in the Comments tab.
+
+**Done (PLAN §4 Comments, §7.3, §10):**
+- `data/codeforces/CodeforcesEditorial.kt` (pure, tested): `tutorialIds` reads the tutorial blog links from "Contest materials" (English first; announcements, videos and other sidebar boxes left out); `parseEntry` reads the blog page; `section` cuts out one problem's part, from its marker (a link to the problem, its title, or a heading like `B. Title`) to the next problem's, and finds the same problem in the parallel division by title; `render` turns spoilers into `<details>`, code into the posts' foldable blocks (`Markdown.codeBlock`, now public; Python open, C++ folded), maths into text, images into "[image]", and drops links and inline styles.
+- `CodeforcesWeb.editorialPage`: loads the blog in the hidden WebView and waits up to 8 s for the page's script to fill the `div.problemTutorial` boxes ("Tutorial is loading..."), then asks `/data/problemTutorial` itself and waits 8 s more. Checked 2026-11-04 on `api/blogEntry.view` for blog 132373: the API content has the boxes unfilled, so the API alone isn't enough; from the Mac, every page and `/data/problemTutorial` answer a plain client with Cloudflare's check and only `/api/` is open.
+- `parseStatement` saves the tutorial ids in `metaData.editorials`; statements saved earlier read them from `/contest/<id>`.
+- `Repository.fetchEditorial`: one `Solution` (`html = true`, new field, saved in the JSON) per problem: "Editorial: A. Title", or the whole editorial if the part can't be found, or "No editorial found" (so it isn't looked for on every open; ⟳ looks again). Every problem of the contest in the list gets its part from the same page. Codeforces' empty discussion rows from before (`"[]"`) no longer count as saved (`savedDiscussion`, `StoreDao.discussionSlugs`, `discussionCount`); no schema change.
+- Packs: the discussions pass now fetches Codeforces editorials, checking again per problem since one page saves the contest. "Everything on Codeforces" estimate 3 → 5 s and 15 → 20 KB per problem.
+- `MainActivity`: Comments shows an **Editorial** button for Codeforces; the editorial loads the first time Comments is shown (not on open, so the hidden browser stays free for Submit); posts render HTML bodies as they are.
+
+**On the phone:** installed. Comments on 2278A showed "Loading the contest's editorial…", then Cloudflare's interactive check (Turnstile) stopped the hidden browser on `/contest/2278` after 25 s, and the pane showed the usual "browser check, sign in to pass it" message. Nothing was saved. **Still to check:** pass the check from ⚙ → Accounts → Sign in, then ⟳ in Comments: the real blog page markup (`div.topic` / `div.content div.ttypography`), the sidebar markup, and whether the tutorials fill.
+
+**Tests:** `CodeforcesEditorialTest` (7, on the real content of blog 132373 wrapped in page markup, plus a heading-style editorial). All Kotlin tests pass.
+
+### 2026-11-03 (rev 31): Codeforces runs use each problem's own limits
+
+**Owner asked:** make Codeforces local runs use each problem's own limit instead of the fixed 3 s.
+
+**Done:** `LocalJudge.caseLimitMs` and `memLimitMb` read the "time limit per test" and "memory limit per test" that `CodeforcesApi.parseStatement` already saves in `metaData` (`"1 second"`, `"2.5 seconds"`, `"256 megabytes"`), clamped to 0.1–30 s and 16–2048 MB. `LocalJudge.request` sends them as `caseLimitMs` / `memLimitMb` (the harness already took both), and `MainActivity.runLocally` waits `overallLimitMs(cases, caseLimitMs)`. LeetCode and NeetCode keep 3 s and 512 MB; an unreadable or missing Codeforces limit falls back to them. Statements saved earlier already have the limits, so nothing is re-downloaded. Stress tests are unchanged (not used on Codeforces).
+
+**Tests:** `LocalJudgeTest.codeforcesLimits` (4A: 1 s, 64 MB; decimals; missing values; LeetCode unchanged). All Kotlin and harness tests pass; installed.
 
 ### 2026-11-03 (rev 30): consistency pass; one test checklist; Codeforces maths fixed
 
@@ -569,6 +678,16 @@ Stale text fixed:
 
 | Date | Revision | What changed | Why |
 |---|---|---|---|
+| 2026-11-05 | **40** | §5.4 `Counter`, `OrderedDict` complete as classes | Owner bug report |
+| 2026-11-05 | **39** | §5.4 accepted functions and classes get `()` | Owner request |
+| 2026-11-05 | **38** | §3 `:complete` process; §5.4 type-aware completion with Jedi; bundled Jedi/parso | Owner request |
+| 2026-11-05 | **37** | §5.3 `fn` palette: `( )` in, `^ &` out | Owner request |
+| 2026-11-04 | **36** | §3 bundled KaTeX; §4 reading panes run bundled scripts under a CSP; §7.3 maths kept as TeX and drawn by KaTeX, text fallback rewritten, old statements re-downloaded | Owner bug report (\\bigl shown as text) |
+| 2026-11-04 | **35** | §4 Comments: Codeforces opens its one editorial directly; §7.3 TeX `\\gt`, `\\lt`, punctuation symbols | Owner request; seen on the phone |
+| 2026-11-04 | **34** | §7.3 editorial spoilers start open; editorial code shown in full | Owner request |
+| 2026-11-04 | **33** | §7.3 editorials saved as the site's HTML and formatted on display, with fallbacks and a browser link; §13 `RegexCompatTest` | Owner bug report (regex error on the phone) |
+| 2026-11-04 | **32** | §4 Comments, §7.3, §10, §15: Codeforces editorials in the Comments pane; saved by packs | Owner request |
+| 2026-11-03 | **31** | §9.2 and §7.3: Codeforces local runs use the problem's own time and memory limits | Owner request |
 | 2026-11-03 | **30** | Consistency pass: one test checklist replaces the three test files; PLAN and README links and details corrected; Codeforces maths (§7.3) | Owner request |
 | 2026-11-03 | **29** | PLAN rewritten as a description of the current app; unbuilt features, roadmap, Phase 0 test plan and appendices dropped; README rewritten | Owner request |
 | 2026-11-03 | **28** | §4.2 reading size scales whole panes (controls with the text); chip rows wrap | Owner request |

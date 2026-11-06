@@ -73,12 +73,17 @@ object Pages {
      */
     fun post(s: Solution, post: Post?, status: String?): String = buildString {
         append("<h1>${HtmlClean.escape(s.title)}</h1>")
-        append("<div class=\"post-meta\">${HtmlClean.escape(s.author)}" + (if (s.topicId == 0L) "" else " · ▲ ${s.votes} · 💬 ${s.commentCount}") + "</div>")
+        append("<div class=\"post-meta\">${HtmlClean.escape(s.author)}" + (if (s.topicId == 0L || s.html) "" else " · ▲ ${s.votes} · 💬 ${s.commentCount}") + "</div>")
         if (status != null) append("<p class=\"note\">${HtmlClean.escape(status)}</p>")
         val body = post?.body ?: s.body
-        if (body != null) append(Markdown.toHtml(body, Markdown.Fold.NON_PYTHON))
+        if (body != null) append(if (s.html) dev.titan.code.data.codeforces.CodeforcesEditorial.show(body) else Markdown.toHtml(body, Markdown.Fold.NON_PYTHON))
         else if (status == null) append("<p class=\"dim\">Not saved. Open it online to read it.</p>")
-        if (post == null || s.topicId == 0L) return@buildString
+        // Rev 33: a Codeforces editorial can always be opened on the site.
+        if (s.html && s.topicId > 0) {
+            val url = dev.titan.code.data.codeforces.CodeforcesEditorial.blogUrl(s.topicId)
+            append("<a class=\"more-link\" href=\"$OPEN_LINK${HtmlClean.escape(url)}\">Open the editorial in the browser</a>")
+        }
+        if (post == null || s.topicId == 0L || s.html) return@buildString
         append("<h2>Comments (${post.totalComments})</h2>")
         if (post.comments.isEmpty()) append("<p class=\"dim\">No comments.</p>")
         post.comments.forEach { append(comment(it)) }
@@ -87,6 +92,9 @@ object Pages {
 
     /** Intercepted by the WebView client; never navigates. */
     const val MORE_LINK = "titan://more-comments"
+
+    /** Followed by a URL to open in the phone's browser (rev 33). */
+    const val OPEN_LINK = "titan://open?"
 
     private fun comment(c: Comment): String = buildString {
         append("<div class=\"c\"><div class=\"who\"><b>${HtmlClean.escape(c.author)}</b> · ▲ ${c.votes} · ${date(c.createdSec * 1000)}</div>")

@@ -27,32 +27,8 @@ import titan_checkers as checkers
 import titan_drivers as drivers
 import titan_limits as limits
 
-# LeetCode's pre-imported names, so solutions that rely on them work unchanged. To be confirmed
-# against LeetCode with a probe solution printing sorted(globals()) (PLAN §7).
-PRELUDE = """
-from typing import *
-import collections, heapq, bisect, math, itertools, functools, string, re, random, operator, copy, statistics
-from collections import *
-from heapq import *
-from bisect import *
-from itertools import *
-from functools import *
-from math import *
-from string import *
-from operator import *
-from sortedcontainers import SortedList, SortedDict, SortedSet
-
-class ListNode:
-    def __init__(self, val=0, next=None):
-        self.val = val
-        self.next = next
-
-class TreeNode:
-    def __init__(self, val=0, left=None, right=None):
-        self.val = val
-        self.left = left
-        self.right = right
-"""
+# LeetCode's pre-imported names (shared with the completer, rev 38).
+from titan_prelude import PRELUDE
 
 USER_FILE = "solution.py"
 CASE_LIMIT_MS = 3000   # per case, on the phone (rev 24); the request can change it

@@ -41,6 +41,32 @@ class CodeforcesWeb(context: Context) {
     }
 
     /**
+     * An editorial blog page (rev 32), once its "Tutorial is loading..." boxes are filled. The
+     * page's own script fills them; if they're still empty after 8 s, they're asked for the way
+     * that script does (`/data/problemTutorial`), and given 8 s more. Whatever is left is read
+     * as it is ([CodeforcesEditorial.render] marks it).
+     */
+    suspend fun editorialPage(url: String): String = lock.withLock {
+        withContext(Dispatchers.Main) {
+            load(url)
+            suspend fun settle(): Boolean {
+                repeat(16) {
+                    if (eval(PENDING_TUTORIALS_JS) == "0") return true
+                    delay(500)
+                }
+                return false
+            }
+            if (!settle()) {
+                TLog.w("codeforces: tutorials still loading on $url, asking for them")
+                eval(FILL_TUTORIALS_JS)
+                settle()
+            }
+            delay(300) // MathJax on the filled text; unMathJax reads either form
+            eval("document.documentElement.outerHTML")
+        }
+    }
+
+    /**
      * Submit [code] for problem [contestId][index] in [language]. Returns when Codeforces accepted
      * the form (it moves to the status page); throws with Codeforces' message otherwise.
      */
@@ -143,6 +169,29 @@ class CodeforcesWeb(context: Context) {
     }
 
     companion object {
+        /** How many editorial tutorials still say "Tutorial is loading..." (rev 32). */
+        const val PENDING_TUTORIALS_JS = """(function(){
+          var n = 0;
+          document.querySelectorAll('.problemTutorial').forEach(function(e){ if (/Tutorial is loading/i.test(e.textContent)) n++; });
+          return '' + n;
+        })()"""
+
+        /** Ask for each unfilled tutorial as the page's script does, and fill it from the reply's `html`. */
+        const val FILL_TUTORIALS_JS = """(function(){
+          var m = document.querySelector('meta[name="X-Csrf-Token"]'), i = document.querySelector('input[name=csrf_token]');
+          var t = (m && m.content) || (i && i.value) || '';
+          document.querySelectorAll('.problemTutorial').forEach(function(e){
+            if (!/Tutorial is loading/i.test(e.textContent)) return;
+            var code = e.getAttribute('problemcode') || '';
+            fetch('/data/problemTutorial', {method: 'POST', credentials: 'same-origin',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Csrf-Token': t},
+              body: 'problemCode=' + encodeURIComponent(code) + '&csrf_token=' + encodeURIComponent(t)})
+              .then(function(r){ return r.text(); })
+              .then(function(s){ try { var j = JSON.parse(s); if (j.html) e.innerHTML = j.html; } catch (x) {} });
+          });
+          return 'sent';
+        })()"""
+
         /**
          * The signed-in handle: only when the page has a logout link (so a blog author's link on a
          * signed-out page never counts), from the header, or the profile link just before logout.

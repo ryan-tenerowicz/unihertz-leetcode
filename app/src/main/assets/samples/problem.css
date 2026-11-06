@@ -11,6 +11,8 @@ code, pre { font-family: "JetBrains Mono", monospace; font-size: 13px; }
 code { background: #1a1a1a; padding: 1px 4px; border-radius: 3px; }
 pre { background: #111; border-left: 3px solid #333; padding: 8px 10px; white-space: pre-wrap; margin: 6px 0; }
 pre b { color: #9a9a9a; font-weight: normal; }
+/* rev 34: a block's code sits on the block's background, not a band per line. */
+pre code { background: none; padding: 0; border-radius: 0; }
 strong { color: #fff; }
 .easy, .medium, .hard { font-size: 12px; font-weight: normal; padding: 1px 6px; border-radius: 9px; vertical-align: middle; }
 .easy { color: #00b8a3; border: 1px solid #00b8a3; }
@@ -46,3 +48,8 @@ pre .lang { float: right; color: #666; font-size: 11px; font-family: sans-serif;
 /* rev 10: solution post */
 .post-meta { color: #8a8a8a; font-size: 12px; margin: -6px 0 10px; }
 .more-link { display: block; text-align: center; padding: 12px; margin: 12px 0; border: 1px solid #333; border-radius: 6px; color: #ffcc33; }
+/* rev 36: maths drawn by KaTeX (titan-math.js); the text conversion shows if it can't be drawn. */
+.katex { font-size: 1.05em; }
+div.math { margin: 8px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+div.math .katex-display { margin: 0; }
+span.math.drawn { white-space: nowrap; }
