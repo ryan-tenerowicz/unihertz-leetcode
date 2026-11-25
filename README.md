@@ -8,7 +8,7 @@ Browse, read, write, run and submit **LeetCode**, **NeetCode** and **Codeforces*
 
 - **Three sites, one editor.** Problem lists with type-to-filter, difficulty/status chips, NeetCode 150 / Blind 75 / NeetCode 250 lists, the LeetCode daily and a 🎲 random pick. Paid problems are hidden.
 - **A keyboard-first Python editor.**
-  - Every symbol is reachable: Alt, Alt+Shift, and an `fn` palette for `= [ ] { } < > | ; ~`.
+  - Every symbol is reachable: Alt, and a two-row `fn` palette (swipe up for the second row).
   - `sym` + letter commands.
   - Auto-pairing, smart Enter and Backspace, type-aware completion (Jedi: `nums.` lists the list methods), indent guides and bracket highlighting.
   - Soft wrap and a saved font size.

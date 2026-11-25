@@ -1,6 +1,10 @@
 package dev.titan.code.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,24 +24,64 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.titan.code.input.InputRouter
 import dev.titan.code.input.Leader
 
-/** Symbols the key map lacks, in the `fn` palette (PLAN §5.3). */
-val PALETTE_SYMBOLS = listOf("=", "(", ")", "[", "]", "{", "}", "<", ">", "|", ";", "~", "%")
+/**
+ * The `fn` palette's first row (PLAN §5.2, rev 41): `=` and the brackets, then the most used of
+ * the other symbols. No symbol appears twice across the rows.
+ */
+val PALETTE_ROW_1 = listOf("=", "(", ")", "[", "]", "{", "}", "<", ">", "|", ":", ".", ",", "_", "-")
 
-/** The `fn` symbol palette: a compact strip above the status line (PLAN §5.3). */
+/**
+ * The second row, shown by swiping up: Shift+1 to Shift+8 in keyboard order (Shift+9/0 are the
+ * `( )` on row 1), then the rest, most used first.
+ */
+val PALETTE_ROW_2 = listOf("!", "@", "#", "$", "%", "^", "&", "*", "+", "'", "/", "\"", "~", ";", "\\")
+
+/**
+ * The `fn` symbol palette: a compact strip above the status line (PLAN §5.2). Swiping up on it
+ * reveals [PALETTE_ROW_2] beneath the first row; swiping down hides it again. A tap inserts.
+ */
 @Composable
-fun PaletteStrip(mono: FontFamily, onSymbol: (String) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().background(Colors.panel).padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
+fun PaletteStrip(mono: FontFamily, expanded: Boolean, onExpand: (Boolean) -> Unit, onSymbol: (String) -> Unit) {
+    val threshold = with(LocalDensity.current) { 16.dp.toPx() }
+    Column(
+        Modifier.fillMaxWidth().background(Colors.panel)
+            .pointerInput(Unit) {
+                var drag = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { drag = 0f },
+                    onVerticalDrag = { change, dy ->
+                        change.consume()
+                        drag += dy
+                        if (drag < -threshold) { onExpand(true); drag = 0f }
+                        else if (drag > threshold) { onExpand(false); drag = 0f }
+                    },
+                )
+            }
+            .padding(start = 6.dp, end = 6.dp, bottom = 4.dp),
     ) {
-        PALETTE_SYMBOLS.forEach { s ->
+        // Grab handle: says the strip can be swiped.
+        Box(Modifier.fillMaxWidth().height(8.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.width(28.dp).height(3.dp).background(if (expanded) Colors.accent else Colors.dim, RoundedCornerShape(2.dp)))
+        }
+        PaletteRow(mono, PALETTE_ROW_1, onSymbol)
+        AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
+            PaletteRow(mono, PALETTE_ROW_2, onSymbol, Modifier.padding(top = 3.dp))
+        }
+    }
+}
+
+@Composable
+private fun PaletteRow(mono: FontFamily, symbols: List<String>, onSymbol: (String) -> Unit, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        symbols.forEach { s ->
             Box(
                 Modifier.weight(1f).height(40.dp)
                     .border(1.dp, Colors.divider, RoundedCornerShape(5.dp))
@@ -93,13 +137,9 @@ fun CheatSheet(mono: FontFamily, onClose: () -> Unit) {
     ) {
         Heading("Hold sym + key")
         Leader.entries.forEach { Row2(mono, "sym+${it.keyLabel}", it.label) }
-        Heading("Alt+Shift (on the 4–7 keys)")
-        InputRouter.ALT_SHIFT.forEach { (code, sym) ->
-            val key = android.view.KeyEvent.keyCodeToString(code).removePrefix("KEYCODE_")
-            Row2(mono, "Alt+Shift+$key", sym)
-        }
-        Heading("fn: symbol palette (tap)")
-        Text(PALETTE_SYMBOLS.joinToString("  "), color = Colors.text, fontSize = 15.sp, fontFamily = mono)
+        Heading("fn: symbol palette (tap; swipe up for row 2)")
+        Text(PALETTE_ROW_1.joinToString("  "), color = Colors.text, fontSize = 15.sp, fontFamily = mono)
+        Text(PALETTE_ROW_2.joinToString("  "), color = Colors.text, fontSize = 15.sp, fontFamily = mono)
         Heading("Completion")
         Row2(mono, "sym+Space", "Take the first suggestion (or indent)")
         Heading("Other keys")

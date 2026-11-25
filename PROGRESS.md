@@ -65,6 +65,14 @@ Known limitations are listed in PLAN §15.
 
 ## Work log
 
+### 2026-11-25 (rev 41): two-row `fn` palette; Alt+Shift off
+
+The owner couldn't find `*` (it's Alt+A) and wants every symbol on the palette instead of hunting for chords.
+
+- Row 1: `= ( ) [ ] { } < > | : . , _ -`. Swipe up on the strip to show row 2 beneath it: `! @ # $ % ^ & *` (Shift+1–8 in keyboard order; Shift+9/0 are row 1's `( )`) then `+ ' / " ~ ; \`; swipe down hides it. No duplicates; 15 keys a row. A grab handle on top (yellow when row 2 is out) shows it can be swiped. Each opening starts on row 1 (owner, after trying it).
+- Alt+Shift now types nothing (the `$ % ^ &` map is gone); the cheat sheet lists both palette rows.
+- **Tests:** `InputRouterTest.altShiftTypesNothing`. All Kotlin tests pass; installed. The palette couldn't be opened from adb (`input keyevent 403` arrives as keycode 0), so the swipe is unchecked on the phone.
+
 ### 2026-11-05 (rev 40): `Counter` gets its `()`
 
 The owner saw functions get brackets but `Counter` not. Jedi resolved `Counter` from the first star import that has it (`typing`, an alias, kind "statement"); at run time `from collections import *` comes later and wins.
@@ -678,6 +686,7 @@ Stale text fixed:
 
 | Date | Revision | What changed | Why |
 |---|---|---|---|
+| 2026-11-25 | **41** | §5.2 `fn` palette: two rows, swipe up for the second; Alt+Shift types nothing | Owner request |
 | 2026-11-05 | **40** | §5.4 `Counter`, `OrderedDict` complete as classes | Owner bug report |
 | 2026-11-05 | **39** | §5.4 accepted functions and classes get `()` | Owner request |
 | 2026-11-05 | **38** | §3 `:complete` process; §5.4 type-aware completion with Jedi; bundled Jedi/parso | Owner request |

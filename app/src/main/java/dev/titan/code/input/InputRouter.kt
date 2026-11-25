@@ -174,10 +174,10 @@ class InputRouter(
 
     /** The character a key types, or null (PLAN §5.2, §5.3). */
     fun characterFor(k: Key): String? {
+        // Alt+Shift types nothing: every symbol the Alt layer lacks is on the fn palette (rev 41).
         if (k.alt && k.shift) {
-            val c = ALT_SHIFT[k.code]
-            if (c == null) TLog.d("Alt+Shift+${k.desc} dropped (only S/D/F/Z are defined)")
-            return c
+            TLog.d("Alt+Shift+${k.desc} dropped (symbols are on the fn palette)")
+            return null
         }
         if (k.char <= 0 || k.char == ALT_SPACE_PRIVATE_USE) return null
         if (Character.isISOControl(k.char)) return null
@@ -295,14 +295,6 @@ class InputRouter(
             KeyEvent.KEYCODE_SHIFT_LEFT, KeyEvent.KEYCODE_SHIFT_RIGHT, KeyEvent.KEYCODE_BACK,
             KEYCODE_SWIPE_MARKER, KeyEvent.KEYCODE_UNKNOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
-        )
-
-        /** Alt+Shift on the digit keys 4–7 (Alt+S/D/F/Z) gives `$ % ^ &` (PLAN §5.3). */
-        val ALT_SHIFT = mapOf(
-            KeyEvent.KEYCODE_S to "$",
-            KeyEvent.KEYCODE_D to "%",
-            KeyEvent.KEYCODE_F to "^",
-            KeyEvent.KEYCODE_Z to "&",
         )
     }
 }

@@ -171,6 +171,8 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     private var message by mutableStateOf<String?>(null)
     private var messageSeq by mutableIntStateOf(0)
     private var paletteOpen by mutableStateOf(false)
+    /** The palette's second row, shown by swiping up; every opening starts on the first row (rev 41). */
+    private var paletteExpanded by mutableStateOf(false)
     private var cheatOpen by mutableStateOf(false)
     private var settingsOpen by mutableStateOf(false)
     private var setupOpen by mutableStateOf(false)
@@ -1216,6 +1218,7 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
     override fun onFn() {
         if (blockingOverlay()) return
         paletteOpen = !paletteOpen
+        if (paletteOpen) paletteExpanded = false
     }
 
     override fun closePalette(): Boolean = paletteOpen.also { paletteOpen = false }
@@ -1836,7 +1839,7 @@ class MainActivity : ComponentActivity(), InputRouter.Shell {
                 }
             }
             MessageStrip(mono)
-            if (paletteOpen && pane == Pane.CODE) PaletteStrip(mono, ::onPaletteSymbol)
+            if (paletteOpen && pane == Pane.CODE) PaletteStrip(mono, paletteExpanded, { paletteExpanded = it }, ::onPaletteSymbol)
             else if (completions.isNotEmpty() && pane == Pane.CODE && !blockingOverlay()) CompletionStrip(mono, completions) { acceptCompletion(it) }
             StatusLine(mono)
         }

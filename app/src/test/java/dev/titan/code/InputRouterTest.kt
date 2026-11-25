@@ -11,7 +11,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The KeymapEngine tests of PLAN §10: routing, Alt+Shift symbols, leader commands, key repeat. */
+/** The KeymapEngine tests of PLAN §10: routing, Alt+Shift dropped, leader commands, key repeat. */
 class InputRouterTest {
 
     private val log = mutableListOf<String>()
@@ -100,12 +100,11 @@ class InputRouterTest {
         assertEquals(listOf("insert a", "insert #"), log)
     }
 
-    @Test fun altShiftDigitKeysGiveMissingSymbols() {
-        for (code in listOf(KeyEvent.KEYCODE_S, KeyEvent.KEYCODE_D, KeyEvent.KEYCODE_F, KeyEvent.KEYCODE_Z)) {
-            press(code, 0, shift = true, alt = true)
+    @Test fun altShiftTypesNothing() {
+        for (code in listOf(KeyEvent.KEYCODE_S, KeyEvent.KEYCODE_D, KeyEvent.KEYCODE_A, KeyEvent.KEYCODE_Q)) {
+            press(code, '*'.code, shift = true, alt = true)
         }
-        press(KeyEvent.KEYCODE_Q, 0, shift = true, alt = true) // undefined: dropped
-        assertEquals(listOf("insert $", "insert %", "insert ^", "insert &"), log)
+        assertTrue(log.isEmpty())
     }
 
     @Test fun altSpaceIsDropped() {

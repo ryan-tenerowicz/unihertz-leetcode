@@ -10,7 +10,7 @@ An Android app for practising coding problems in Python on the **Unihertz Titan 
 
 **A full practice session (pick a problem, read it, write a solution, run it, submit) with all text editing on the physical keyboard.** The touchscreen handles navigation and the big actions: the pane tabs, Run and Submit, scrolling, and tapping rows, links and buttons.
 
-1. **Every Python symbol is reachable.** Printed symbols come from the keyboard's Alt layer; `$ % ^ &` from Alt+Shift; the rest (`= [ ] { } < > | ; ~`) from a touch **symbol palette** opened with `fn` (§5.2). This palette is the one deliberate touch exception for typing.
+1. **Every Python symbol is reachable.** Printed symbols come from the keyboard's Alt layer; every symbol, including the ones the keys lack (`= [ ] { } < > | ; ~ $ % ^ & \`), is on a two-row touch **symbol palette** opened with `fn` (§5.2). This palette is the one deliberate touch exception for typing.
 2. **The keyboard surface is a trackpad for the cursor.** Swipes move the cursor; Shift + swipe selects (§6).
 3. **No IME interference.** No autocorrect, auto-capitalisation, "double space → period" or candidate bar.
 4. **One keyboard binding per action.** No alternate shortcuts, no sticky modifiers, no tap-versus-hold variants. Touch controls sit alongside and don't count.
@@ -161,15 +161,15 @@ The keyboard backlight can't be controlled by apps and is left to the system. Ho
 | Base | Plain keys | Letters, Space, Enter, Backspace |
 | Shift | Hold | Capitals; selection while swiping |
 | Alt | Hold (no sticky Alt) | What's printed on the keycaps: `0–9` and `, . ? ! @ # ' " : _ - + * / ( )` |
-| Alt+Shift | Hold both, any order | `$ % ^ &` on S / D / F / Z (Shift+4/5/6/7 on a normal keyboard) |
+| Alt+Shift | Hold both | Nothing (rev 41: the palette has every symbol) |
 | Leader | Hold `sym`, press a letter | Commands (§5.3) |
-| Palette | Tap `fn` | A strip of `= ( ) [ ] { } < > \| ; ~ %`; tap one to insert it (`^ &` are on Alt+Shift) |
+| Palette | Tap `fn` | A strip of `= ( ) [ ] { } < > \| : . , _ -`; swipe up on it for a second row beneath, `! @ # $ % ^ & *` (Shift+1–8, keyboard order) then `+ ' / " ~ ; \` (swipe down hides it). No symbol appears twice. Tap one to insert it |
 
-- The palette inserts through the same path as typing, so pairing and type-over apply. `fn` or Back closes it; typing any other key closes it and types the key.
+- Each opening starts on the first row. The palette inserts through the same path as typing, so pairing and type-over apply. `fn` or Back closes it; typing any other key closes it and types the key.
 - **Shift+Backspace** deletes forward. With a selection, Backspace and Shift+Backspace delete it.
 - **Key repeat** (the keyboard has none): Backspace, Shift+Backspace and characters repeat after a 400 ms hold, every 40 ms. `sym` chords never repeat.
 - **Arrow keys** (Cursor Assistant or any source) move by character and line, keeping the column; Shift extends the selection.
-- Alt+Space (a private-use character) and other Alt+Shift combinations insert nothing. Press `sym` before Shift: Shift then `sym` opens the system keyboard picker.
+- Alt+Space (a private-use character) and Alt+Shift combinations insert nothing. Press `sym` before Shift: Shift then `sym` opens the system keyboard picker.
 
 ### 5.3 Leader commands (hold `sym`)
 
